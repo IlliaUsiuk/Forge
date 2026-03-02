@@ -1,6 +1,30 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { format } from 'date-fns'
+
+// Check for new achievements
+function checkAchievements(state: AppState, newAchievements: string[]): string[] {
+  const achievements = [...newAchievements]
+
+  // Streak milestones
+  if (state.streak.current === 7 && !achievements.includes('streak-7')) achievements.push('streak-7')
+  if (state.streak.current === 30 && !achievements.includes('streak-30')) achievements.push('streak-30')
+  if (state.streak.current === 100 && !achievements.includes('streak-100')) achievements.push('streak-100')
+  if (state.streak.longest === 365 && !achievements.includes('streak-365')) achievements.push('streak-365')
+
+  // Track milestones
+  Object.entries(state.trackXP).forEach(([track, xp]) => {
+    if (xp >= 100 && !achievements.includes(`${track}-100`)) achievements.push(`${track}-100`)
+    if (xp >= 1000 && !achievements.includes(`${track}-1000`)) achievements.push(`${track}-1000`)
+  })
+
+  // Total XP milestones
+  const totalXP = Object.values(state.trackXP).reduce((a, b) => a + b, 0)
+  if (totalXP >= 500 && !achievements.includes('total-500')) achievements.push('total-500')
+  if (totalXP >= 5000 && !achievements.includes('total-5000')) achievements.push('total-5000')
+
+  return achievements
+}
 import type { Task, Track, AppState, StreakState, DayJob } from './types'
 import { TRACK_XP } from './types'
 import { generateRecurringTasks } from './schedule'
@@ -45,6 +69,8 @@ export const useStore = create<Store>()(
       trackXP: { ...initialTrackXP },
       onboardingDone: false,
       chatHistory: [],
+      dailyXP: {},
+      achievements: [],
 
       completeTask: (taskId) => {
         const state = get()
@@ -56,6 +82,7 @@ export const useStore = create<Store>()(
             t.id === taskId ? { ...t, completed: true } : t
           )
           const newTrackXP = { ...s.trackXP }
+          // Use task.xp directly (handles dynamic XP for polish)
           newTrackXP[task.track] = (newTrackXP[task.track] || 0) + task.xp
           let newStreak = { ...s.streak }
           if (task.date === today) {
@@ -79,7 +106,23 @@ export const useStore = create<Store>()(
               }
             }
           }
-          return { tasks: updatedTasks, trackXP: newTrackXP, streak: newStreak }
+          return {
+            tasks: updatedTasks,
+            trackXP: newTrackXP,
+            streak: newStreak,
+            dailyXP: {
+              ...s.dailyXP,
+              [today]: {
+                ...(s.dailyXP[today] || {}),
+                [task.track]: ((s.dailyXP[today]?.[task.track] || 0) + task.xp),
+              },
+            },
+            achievements: checkAchievements({
+              ...s,
+              trackXP: newTrackXP,
+              streak: newStreak,
+            }, s.achievements),
+          }
         })
       },
 
@@ -87,13 +130,25 @@ export const useStore = create<Store>()(
         const state = get()
         const task = state.tasks.find(t => t.id === taskId)
         if (!task || !task.completed) return
+        const today = format(new Date(), 'yyyy-MM-dd')
         set(s => {
           const updatedTasks = s.tasks.map(t =>
             t.id === taskId ? { ...t, completed: false } : t
           )
           const newTrackXP = { ...s.trackXP }
+          // Use task.xp directly (handles dynamic XP for polish)
           newTrackXP[task.track] = Math.max(0, (newTrackXP[task.track] || 0) - task.xp)
-          return { tasks: updatedTasks, trackXP: newTrackXP }
+          return {
+            tasks: updatedTasks,
+            trackXP: newTrackXP,
+            dailyXP: task.date === today ? {
+              ...s.dailyXP,
+              [today]: {
+                ...(s.dailyXP[today] || {}),
+                [task.track]: Math.max(0, (s.dailyXP[today]?.[task.track] || 0) - task.xp),
+              },
+            } : s.dailyXP,
+          }
         })
       },
 

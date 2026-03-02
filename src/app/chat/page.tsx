@@ -128,14 +128,21 @@ export default function ChatPage() {
 
       const data = await res.json()
 
+      if (!res.ok) {
+        const errorMsg = data.error || 'Ошибка сервера. Проверь API ключ и интернет.'
+        addChatMessage({ role: 'assistant', content: `⚠️ ${errorMsg}` })
+        return
+      }
+
       if (data.message) {
         addChatMessage({ role: 'assistant', content: data.message })
       }
       if (data.actions?.length > 0) {
         executeActions(data.actions)
       }
-    } catch {
-      addChatMessage({ role: 'assistant', content: 'Что-то пошло не так. Проверь интернет.' })
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Неизвестная ошибка'
+      addChatMessage({ role: 'assistant', content: `❌ Ошибка сети: ${errorMsg}` })
     } finally {
       setLoading(false)
     }

@@ -15,8 +15,19 @@ const TRACK_EMOJI: Record<string, string> = {
 
 const DAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
+const ACHIEVEMENT_DATA: Record<string, { label: string; icon: string; description: string }> = {
+  'streak-7': { label: 'Неделя огня', icon: '🔥', description: '7 дней подряд' },
+  'streak-30': { label: 'Месячный марафон', icon: '🏃', description: '30 дней подряд' },
+  'streak-100': { label: 'Столетник', icon: '💯', description: '100 дней подряд' },
+  'streak-365': { label: 'Чемпион года', icon: '👑', description: '365 дней подряд' },
+  'total-500': { label: 'Хороший старт', icon: '🚀', description: '500 XP всего' },
+  'total-5000': { label: 'Мастер', icon: '🎓', description: '5000 XP всего' },
+  'ai-100': { label: 'Ученик AI', icon: '🤖', description: '100 XP в AI' },
+  'ai-1000': { label: 'Профессор AI', icon: '🧠', description: '1000 XP в AI' },
+}
+
 export default function StatsPage() {
-  const { tasks, streak, trackXP } = useStore()
+  const { tasks, streak, trackXP, achievements, dailyXP } = useStore()
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const totalXP = Object.values(trackXP).reduce((a, b) => a + b, 0)
@@ -196,6 +207,34 @@ export default function StatsPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Achievements */}
+      <div
+        className="rounded-2xl p-5"
+        style={{ background: '#0f0f1a', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset' }}
+      >
+        <h2 className="mb-4 font-semibold text-foreground">Достижения ({achievements.length})</h2>
+        {achievements.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Начни учиться, и первое достижение появится скоро! 🚀</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {achievements.map(id => {
+              const info = ACHIEVEMENT_DATA[id]
+              return (
+                <div
+                  key={id}
+                  className="rounded-lg p-3 text-center transition-transform hover:scale-105"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <div className="text-3xl mb-1">{info?.icon || '🏆'}</div>
+                  <p className="text-xs font-semibold text-foreground leading-tight">{info?.label || id}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">{info?.description || ''}</p>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* GitHub-style heatmap */}

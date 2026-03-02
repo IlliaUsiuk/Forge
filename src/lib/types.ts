@@ -35,6 +35,9 @@ export type AppState = {
   trackXP: Record<Track, number>
   onboardingDone: boolean
   chatHistory: { role: 'user' | 'assistant'; content: string }[]
+  // Analytics data
+  dailyXP: Record<string, Record<Track, number>>  // YYYY-MM-DD -> {track: xp}
+  achievements: string[]  // list of earned achievement IDs
 }
 
 export const TRACK_COLORS: Record<Track, string> = {
@@ -57,12 +60,14 @@ export const TRACK_LABELS: Record<Track, string> = {
   gym: 'Зал',
 }
 
+// Polish XP handled specially: 30 for 1h, 15 for 30min
+// See schedule.ts where polish tasks are generated with dynamic XP
 export const TRACK_XP: Record<Track, number> = {
   ai: 30,
   design: 25,
   selfdevelopment: 20,
   mediabuy: 25,
   english: 20,
-  polish: 20,
+  polish: 0,  // Polish XP is dynamic — see schedule.ts (15 or 30)
   gym: 15,
 }
