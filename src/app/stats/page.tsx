@@ -2,8 +2,10 @@
 
 import { format, subDays, parseISO, startOfWeek, addDays } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import { Download } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { TRACK_COLORS, TRACK_LABELS, type Track } from '@/lib/types'
+import { exportToCSV, exportToICS, exportToJSON } from '@/lib/export'
 import { Flame, Zap, Trophy, Target } from 'lucide-react'
 
 const ALL_TRACKS: Track[] = ['ai', 'design', 'selfdevelopment', 'mediabuy', 'english', 'polish', 'gym']
@@ -76,7 +78,38 @@ export default function StatsPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-3xl">
-      <h1 className="text-2xl font-bold text-foreground">Статистика</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-foreground">Статистика</h1>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => exportToCSV(tasks, `tasks-${format(new Date(), 'yyyy-MM-dd')}.csv`)}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-foreground transition-colors"
+            title="Скачать в CSV"
+          >
+            <Download size={14} />
+            CSV
+          </button>
+          <button
+            onClick={() => exportToICS(tasks, `schedule-${format(new Date(), 'yyyy-MM-dd')}.ics`)}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-foreground transition-colors"
+            title="Скачать в ICS (календарь)"
+          >
+            <Download size={14} />
+            ICS
+          </button>
+          <button
+            onClick={() => exportToJSON(
+              { tasks, streak, trackXP, dailyXP, achievements, workDays, dayJobs },
+              `backup-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.json`
+            )}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-foreground transition-colors"
+            title="Скачать полную копию"
+          >
+            <Download size={14} />
+            Бэкап
+          </button>
+        </div>
+      </div>
 
       {/* Top stats — styled like dashboard */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
