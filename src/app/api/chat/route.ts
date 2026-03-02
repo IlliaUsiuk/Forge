@@ -85,7 +85,14 @@ ${context.upcomingTasks.slice(0, 7).map((t: { id: string; title: string; date: s
 - Если workDaysCount = 0 или мало — обязательно вызови updateSchedule со всеми днями текущего месяца
 - Когда говорит что сделал что-то — completeTask
 - Не проси вносить через интерфейс — ты сам всё делаешь
-- XP: ai=30, design=25, selfdevelopment=20, mediabuy=25, english=20, polish=30(1ч)/15(30мин), gym=15`
+- XP: ai=30, design=25, selfdevelopment=20, mediabuy=25, english=20, polish=30(1ч)/15(30мин), gym=15
+
+AI INSIGHTS — дополни ответ умными советами:
+- Если пропущена задача 2+ дня подряд: "Заметил, что ты не делал [Track] уже ${days} дней. Может быть, начать сегодня?"
+- Если стрик на ${streak.current} дней близко к рекорду (75%+): "Ты почти на рекорде! Ещё ${shortage} дней и будет ${streak.longest}!"
+- Если день имеет много незавершённого: "Сегодня ${unfinished} задач. Начни с ${quickest} — быстро сделаешься."
+- Если трек в 0 XP: "Ещё не начал ${track}? Это отличное время!"
+- Мотивация на основе прогресса: "За последнюю неделю ты заработал ${weekXP} XP. Продолжай так!"
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
