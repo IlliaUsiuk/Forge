@@ -76,6 +76,15 @@ export default function StatsPage() {
     return '#818cf8'
   }
 
+  // Last 7 days XP graph
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = subDays(new Date(), 6 - i)
+    const dateStr = format(d, 'yyyy-MM-dd')
+    const dayXP = Object.values(dailyXP[dateStr] || {}).reduce((a, b) => a + b, 0)
+    return { date: dateStr, xp: dayXP, day: format(d, 'EEE', { locale: ru }).slice(0, 2) }
+  })
+  const maxDayXP = Math.max(...last7Days.map(d => d.xp), 50)
+
   return (
     <div className="p-6 space-y-6 max-w-3xl">
       <div className="flex items-center justify-between gap-4">
@@ -239,6 +248,37 @@ export default function StatsPage() {
               ))}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* 7-day XP graph */}
+      <div
+        className="rounded-2xl p-5"
+        style={{ background: '#0f0f1a', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset' }}
+      >
+        <h2 className="mb-4 font-semibold text-foreground">XP за 7 дней</h2>
+        <div className="flex items-end gap-1.5 h-40 justify-between">
+          {last7Days.map(({ day, xp }) => (
+            <div
+              key={day}
+              className="flex-1 flex flex-col items-center gap-2"
+              title={`${day}: ${xp} XP`}
+            >
+              <div
+                className="w-full rounded-md transition-all duration-300 hover:brightness-125"
+                style={{
+                  height: maxDayXP > 0 ? `${(xp / maxDayXP) * 100}%` : '4px',
+                  background: xp > 0 ? 'linear-gradient(180deg, #818cf8, #6366f1)' : 'rgba(255,255,255,0.05)',
+                  minHeight: '4px',
+                  boxShadow: xp > 0 ? '0 0 8px rgba(129,140,248,0.5)' : 'none',
+                }}
+              />
+              <span className="text-[10px] text-muted-foreground font-medium">{day}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 text-xs text-muted-foreground text-center">
+          Сегодня: {last7Days[6]?.xp || 0} XP
         </div>
       </div>
 
