@@ -1,26 +1,37 @@
 'use client'
 
 import { useState } from 'react'
+import { format } from 'date-fns'
 import { useStore } from '@/lib/store'
-import { RotateCcw, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 
 export default function SettingsPage() {
-  const { tasks, resetAll } = useStore()
+  const { tasks, clearOldTasks } = useStore()
   const [showConfirm, setShowConfirm] = useState(false)
   const [resetStatus, setResetStatus] = useState<'idle' | 'success'>('idle')
+  const [clearStatus, setClearStatus] = useState<'idle' | 'success'>('idle')
+
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const oldTasksCount = tasks.filter(t => t.date < today).length
+
+  const handleClearOld = () => {
+    clearOldTasks(today)
+    setClearStatus('success')
+    setTimeout(() => setClearStatus('idle'), 3000)
+  }
 
   const handleReset = () => {
-    resetAll()
+    localStorage.removeItem('personal-dashboard-storage')
     setResetStatus('success')
     setShowConfirm(false)
-    setTimeout(() => setResetStatus('idle'), 3000)
+    setTimeout(() => window.location.reload(), 1500)
   }
 
   const totalTasks = tasks.length
   const completedTasks = tasks.filter(t => t.completed).length
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-2xl">
+    <div className="p-4 sm:p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Настройки</h1>
         <p className="text-sm text-muted-foreground mt-1">Управление твоими данными и предпочтениями</p>
@@ -52,6 +63,31 @@ export default function SettingsPage() {
         <h2 className="font-semibold text-foreground mb-4">Управление данными</h2>
 
         <div className="space-y-3">
+          {/* Clear old tasks */}
+          <div className="flex items-start justify-between gap-4 p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)' }}>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-foreground">Очистить старые задачи</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Удалить задачи до сегодня ({oldTasksCount} шт.) — прогресс XP и стрик не затронуты
+              </p>
+            </div>
+            {clearStatus === 'success' ? (
+              <div className="flex items-center gap-2 text-green-400 text-sm font-semibold shrink-0">
+                <CheckCircle2 size={16} />
+                Готово
+              </div>
+            ) : (
+              <button
+                onClick={handleClearOld}
+                disabled={oldTasksCount === 0}
+                className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-30"
+                style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}
+              >
+                Очистить
+              </button>
+            )}
+          </div>
+
           {/* Reset All */}
           <div className="flex items-start justify-between gap-4 p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)' }}>
             <div className="flex-1 min-w-0">

@@ -11,7 +11,7 @@ const ALL_TRACKS: Track[] = ['ai', 'design', 'selfdevelopment', 'mediabuy', 'eng
 
 const TRACK_EMOJI: Record<string, string> = {
   ai: '🤖', design: '🎨', selfdevelopment: '🧠',
-  mediabuy: '📈', english: '🇬🇧', polish: '🇵🇱', gym: '💪',
+  mediabuy: '📈', english: '🗣️', polish: '✍️', gym: '💪',
 }
 
 const TRACK_TIPS: Record<string, string[]> = {
@@ -67,12 +67,16 @@ function getTip(track: string, taskId: string): string {
 
 export default function TasksPage() {
   const { tasks, completeTask, uncompleteTask, skipTask } = useStore()
+  const [tab, setTab] = useState<'current' | 'history'>('current')
   const [filter, setFilter] = useState<'active' | 'done' | 'all'>('active')
   const [selectedTrack, setSelectedTrack] = useState<Track | 'all'>('all')
 
   const today = format(new Date(), 'yyyy-MM-dd')
 
   const filtered = tasks.filter(t => {
+    const isPast = t.date < today
+    if (tab === 'current' && isPast) return false
+    if (tab === 'history' && !isPast) return false
     if (selectedTrack !== 'all' && t.track !== selectedTrack) return false
     if (filter === 'active') return !t.completed && !t.skipped
     if (filter === 'done') return t.completed
@@ -85,7 +89,9 @@ export default function TasksPage() {
     return acc
   }, {})
 
-  const sortedDates = Object.keys(grouped).sort()
+  const sortedDates = Object.keys(grouped).sort(
+    tab === 'history' ? (a, b) => b.localeCompare(a) : (a, b) => a.localeCompare(b)
+  )
 
   const labelDate = (dateStr: string) => {
     const d = parseISO(dateStr)
@@ -94,12 +100,12 @@ export default function TasksPage() {
     return format(d, 'd MMMM · EEEE', { locale: ru })
   }
 
-  const totalActive = tasks.filter(t => !t.completed && !t.skipped).length
+  const totalActive = tasks.filter(t => !t.completed && !t.skipped && t.date >= today).length
   const totalDone = tasks.filter(t => t.completed).length
 
   return (
     <div className="min-h-full p-4 sm:p-6 pb-12" style={{ background: '#07070d' }}>
-      <div className="max-w-xl mx-auto space-y-7">
+      <div className="space-y-7">
 
         {/* Header */}
         <div className="flex items-center justify-between pt-2">
@@ -113,6 +119,28 @@ export default function TasksPage() {
               <span className="font-bold" style={{ color: '#818cf8' }}>{totalDone}</span> выполнено
             </span>
           </div>
+        </div>
+
+        {/* Tab switcher */}
+        <div className="flex gap-1.5">
+          {([['current', '📋 Задания'], ['history', '🕰 История']] as const).map(([t, label]) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className="rounded-xl px-4 py-2 text-xs font-bold transition-all duration-150"
+              style={tab === t ? {
+                background: 'linear-gradient(135deg, #818cf8, #a78bfa)',
+                color: '#fff',
+                boxShadow: '0 4px 16px rgba(129,140,248,0.3)',
+              } : {
+                background: '#12121e',
+                color: '#475569',
+                boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset',
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Filters */}
@@ -313,9 +341,9 @@ export default function TasksPage() {
                                 onClick={() => completeTask(task.id)}
                                 className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all duration-150 active:scale-95"
                                 style={{
-                                  background: `linear-gradient(135deg, ${c}, ${c}cc)`,
-                                  color: '#07070d',
-                                  boxShadow: `0 4px 20px ${c}40`,
+                                  background: `${c}18`,
+                                  color: c,
+                                  boxShadow: `0 0 0 1px ${c}35 inset`,
                                 }}
                               >
                                 <Check size={15} strokeWidth={3} />

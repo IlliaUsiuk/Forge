@@ -1,22 +1,24 @@
 'use client'
 
+import { useState } from 'react'
 import { format, subDays, parseISO, startOfWeek, addDays } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { useStore } from '@/lib/store'
 import { TRACK_COLORS, TRACK_LABELS, type Track } from '@/lib/types'
-import { Flame, Zap, Trophy, Target } from 'lucide-react'
+import { Flame, Zap, Trophy, Target, Copy, Check as CheckIcon } from 'lucide-react'
 
 const ALL_TRACKS: Track[] = ['ai', 'design', 'selfdevelopment', 'mediabuy', 'english', 'polish', 'gym']
 
 const TRACK_EMOJI: Record<string, string> = {
   ai: '🤖', design: '🎨', selfdevelopment: '🧠',
-  mediabuy: '📈', english: '🇬🇧', polish: '🇵🇱', gym: '💪',
+  mediabuy: '📈', english: '🗣️', polish: '✍️', gym: '💪',
 }
 
 const DAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
 export default function StatsPage() {
   const { tasks, streak, trackXP } = useStore()
+  const [copied, setCopied] = useState(false)
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const totalXP = Object.values(trackXP).reduce((a, b) => a + b, 0)
@@ -53,6 +55,45 @@ export default function StatsPage() {
   const completedTotal = tasks.filter(t => t.completed).length
   const maxTrackXP = Math.max(...ALL_TRACKS.map(t => trackXP[t] || 0), 1)
 
+  function copyWeekSummary() {
+    // Only past days (before today) to avoid showing "didn't do" for future tasks
+    const pastDates = weekDates.filter(d => d < today)
+    const pastTasks = tasks.filter(t => pastDates.includes(t.date))
+    const pastByTrack = ALL_TRACKS.map(track => {
+      const tt = pastTasks.filter(t => t.track === track)
+      const done = tt.filter(t => t.completed).length
+      const total = tt.length
+      const xp = tt.filter(t => t.completed).reduce((s, t) => s + t.xp, 0)
+      return { track, done, total, xp }
+    }).filter(t => t.total > 0)
+
+    const weekDone = pastByTrack.reduce((s, t) => s + t.done, 0)
+    const weekTotal = pastByTrack.reduce((s, t) => s + t.total, 0)
+    const weekXP = pastByTrack.reduce((s, t) => s + t.xp, 0)
+    const pastLabel = pastDates.length > 0
+      ? `${format(new Date(pastDates[0] + 'T12:00:00'), 'd MMM', { locale: ru })} – ${format(new Date(pastDates[pastDates.length - 1] + 'T12:00:00'), 'd MMM yyyy', { locale: ru })}`
+      : format(weekStart, 'd MMM yyyy', { locale: ru })
+
+    const lines = [
+      `📊 Итоги недели (${pastLabel})`,
+      ``,
+      `✅ Выполнено: ${weekDone} / ${weekTotal} задач`,
+      `⚡ XP за неделю: ${weekXP}`,
+      `🔥 Стрик: ${streak.current} дн (рекорд: ${streak.longest})`,
+      ``,
+      `По трекам:`,
+      ...pastByTrack.map(t =>
+        `${TRACK_EMOJI[t.track]} ${TRACK_LABELS[t.track as keyof typeof TRACK_LABELS]}: ${t.done}/${t.total} (+${t.xp} XP)`
+      ),
+      ``,
+      `🏆 Всего XP: ${totalXP} | Уровень ${level}`,
+    ]
+
+    navigator.clipboard.writeText(lines.join('\n'))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   const getHeatColor = (done: number, total: number, isFuture: boolean) => {
     if (isFuture) return '#0d0b18'
     if (total === 0) return '#13121f'
@@ -64,8 +105,18 @@ export default function StatsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl">
-      <h1 className="text-2xl font-bold" style={{ color: '#d8c9b0' }}>Свитки прогресса</h1>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold" style={{ color: '#d8c9b0' }}>Свитки прогресса</h1>
+        <button
+          onClick={copyWeekSummary}
+          className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition-all"
+          style={{ background: '#12121e', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset', color: copied ? '#34d399' : 'rgba(255,255,255,0.4)' }}
+        >
+          {copied ? <CheckIcon size={13} /> : <Copy size={13} />}
+          {copied ? 'Скопировано!' : 'Итоги недели'}
+        </button>
+      </div>
 
       {/* Top stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

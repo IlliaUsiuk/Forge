@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { Send, Loader2, Bot, User, CheckCircle2 } from 'lucide-react'
+import { Send, Loader2, Bot, User, CheckCircle2, Lock } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import type { Track, DayJob } from '@/lib/types'
 
@@ -24,6 +24,12 @@ function renderMessage(content: string): React.ReactNode {
   return content.split('\n').map((line, i) => {
     if (line.trim() === '---')
       return <hr key={i} className="my-2 border-white/10" />
+    const h2 = line.match(/^##\s+(.*)/)
+    if (h2)
+      return <p key={i} className="font-bold text-white/90 mt-2 mb-0.5">{parseInline(h2[1])}</p>
+    const h3 = line.match(/^###\s+(.*)/)
+    if (h3)
+      return <p key={i} className="font-semibold text-white/70 mt-1.5 mb-0.5 text-[13px] uppercase tracking-wide">{parseInline(h3[1])}</p>
     const listMatch = line.match(/^[-•]\s+(.*)/)
     if (listMatch)
       return (
@@ -46,22 +52,85 @@ type Action =
   | { type: 'completeTask'; taskId: string }
   | { type: 'uncompleteTask'; taskId: string }
   | { type: 'skipTask'; taskId: string }
+  | { type: 'resetData' }
 
-// Max messages sent to API to avoid token overflow (~15 exchanges)
-const CHAT_HISTORY_LIMIT = 30
+const SESSION_KEY = 'journal-unlocked'
+const JOURNAL_PASSWORD = '1212'
+
+function LockScreen({ onUnlock }: { onUnlock: () => void }) {
+  const [input, setInput] = useState('')
+  const [error, setError] = useState(false)
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (input === JOURNAL_PASSWORD) {
+      sessionStorage.setItem(SESSION_KEY, '1')
+      onUnlock()
+    } else {
+      setError(true)
+      setInput('')
+      setTimeout(() => setError(false), 1500)
+    }
+  }
+
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-6 p-8">
+      <div
+        className="flex h-14 w-14 items-center justify-center rounded-2xl"
+        style={{ background: 'linear-gradient(135deg, rgba(129,140,248,0.2), rgba(167,139,250,0.1))', boxShadow: '0 0 0 1px rgba(129,140,248,0.2) inset' }}
+      >
+        <Lock size={22} style={{ color: '#818cf8' }} />
+      </div>
+      <div className="text-center">
+        <h2 className="text-xl font-bold text-white">Психолог заперт</h2>
+        <p className="text-sm text-white/40 mt-1">Введи пароль чтобы войти</p>
+      </div>
+      <form onSubmit={handleSubmit} className="flex flex-col items-center gap-3 w-full max-w-xs">
+        <input
+          type="password"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          autoComplete="new-password"
+          placeholder="Пароль"
+          className="w-full rounded-xl px-4 py-3 text-center text-lg font-bold tracking-widest outline-none transition-all"
+          style={{
+            background: error ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${error ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)'}`,
+            color: error ? '#ef4444' : 'white',
+          }}
+        />
+        {error && <p className="text-xs text-red-400">Неверный пароль</p>}
+        <button
+          type="submit"
+          className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-all"
+          style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}
+        >
+          Войти
+        </button>
+      </form>
+    </div>
+  )
+}
 
 export default function ChatPage() {
+  const [unlocked, setUnlocked] = useState(false)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [lastActions, setLastActions] = useState<string[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  const { chatHistory, addChatMessage, tasks, streak, trackXP, workDays, dayJobs,
+  useEffect(() => {
+    if (sessionStorage.getItem(SESSION_KEY) === '1') setUnlocked(true)
+  }, [])
+
+  const { chatHistory, addChatMessage, tasks, streak, trackXP, workDays, dayJobs, journalEntries, journalProfiles,
     updateSchedule, setDayJobs, addTask, completeTask, uncompleteTask, skipTask, setOnboardingDone } = useStore()
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatHistory, loading])
+
+  if (!unlocked) return <LockScreen onUnlock={() => setUnlocked(true)} />
 
   const executeActions = (actions: Action[]) => {
     const done: string[] = []
@@ -89,6 +158,12 @@ export default function ChatPage() {
         skipTask(action.taskId)
         const task = tasks.find(t => t.id === action.taskId)
         done.push(`⏭ Пропущено: ${task?.title ?? action.taskId}`)
+      } else if (action.type === 'resetData') {
+        done.push('🗑 Данные сброшены — перезагрузка...')
+        setTimeout(() => {
+          localStorage.removeItem('personal-dashboard-storage')
+          window.location.reload()
+        }, 1200)
       }
     }
     if (done.length > 0) setLastActions(done)
@@ -102,7 +177,11 @@ export default function ChatPage() {
       .filter(t => t.date >= today && !t.completed)
       .sort((a, b) => a.date.localeCompare(b.date))
 
-    return { today, dayOfWeek, todayTasks, upcomingTasks, streak, trackXP, workDaysCount: workDays.length, dayJobs: dayJobs.slice(0, 14) }
+    const recentJournal = [...journalEntries]
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 7)
+
+    return { today, dayOfWeek, todayTasks, upcomingTasks, streak, trackXP, workDaysCount: workDays.length, dayJobs: dayJobs.slice(0, 14), recentJournal, journalProfiles }
   }
 
   const send = async () => {
@@ -116,7 +195,7 @@ export default function ChatPage() {
 
     try {
       const messages: Message[] = [
-        ...chatHistory.slice(-CHAT_HISTORY_LIMIT),
+        ...chatHistory,
         { role: 'user', content: text },
       ]
 
@@ -164,7 +243,7 @@ export default function ChatPage() {
             <Bot size={16} className="text-primary" />
           </div>
           <div>
-            <h1 className="text-sm font-semibold text-foreground">Оракул</h1>
+            <h1 className="text-sm font-semibold text-foreground">Психолог</h1>
             <p className="text-xs text-muted-foreground">Управляет расписанием и заданиями</p>
           </div>
         </div>
@@ -208,7 +287,7 @@ export default function ChatPage() {
               </div>
             )}
             <div
-              className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+              className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed break-words ${
                 msg.role === 'user'
                   ? 'bg-primary text-primary-foreground rounded-tr-sm whitespace-pre-wrap'
                   : 'bg-card text-foreground border border-border rounded-tl-sm'

@@ -3,26 +3,30 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  Crown, MessageSquare, Scroll,
-  Swords, BookOpen, Flame, Zap,
+  Crown, Scroll,
+  BookOpen, Flame, Zap, Settings, BookMarked, Briefcase, ShoppingBag,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 
 const NAV = [
   { href: '/',          icon: Crown,          label: 'Цитадель' },
-  { href: '/chat',      icon: MessageSquare,  label: 'Оракул' },
   { href: '/schedule',  icon: Scroll,         label: 'Хроники' },
-  { href: '/tasks',     icon: Swords,         label: 'Задания' },
   { href: '/stats',     icon: BookOpen,       label: 'Свитки' },
+  { href: '/journal',   icon: BookMarked,     label: 'Дневник' },
+  { href: '/career',    icon: Briefcase,      label: 'Карьера' },
+  { href: '/shop',      icon: ShoppingBag,    label: 'Магазин' },
+  { href: '/settings',  icon: Settings,       label: 'Настройки' },
 ]
 
 const RANK_NAMES = ['Странник', 'Ученик', 'Воин', 'Рыцарь', 'Страж', 'Чемпион', 'Паладин', 'Легенда', 'Архонт']
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { streak, trackXP } = useStore()
+  const { streak, trackXP, purchases } = useStore()
   const totalXP = Object.values(trackXP).reduce((a, b) => a + b, 0)
+  const spentXP = purchases.reduce((s, p) => s + p.price, 0)
+  const availableXP = totalXP - spentXP
   const level = Math.floor(totalXP / 200) + 1
   const rankIndex = Math.min(Math.floor((level - 1) / 3), RANK_NAMES.length - 1)
   const rankName = RANK_NAMES[rankIndex]
@@ -96,20 +100,22 @@ export function Sidebar() {
           <span className="text-sm font-bold text-orange-300 lg:hidden">{streak.current}</span>
         </div>
 
-        <div
-          className="flex items-center justify-center gap-3 rounded-xl px-3 py-3 lg:justify-start"
-          style={{
-            background: 'linear-gradient(135deg, rgba(129,140,248,0.12), rgba(129,140,248,0.04))',
-            boxShadow: '0 0 0 1px rgba(129,140,248,0.1) inset',
-          }}
-        >
-          <Zap size={18} className="shrink-0 text-primary" />
-          <div className="hidden lg:block min-w-0">
-            <p className="text-xs text-primary/60 truncate">{rankName}</p>
-            <p className="text-sm font-bold text-primary">Ур. {level} · {totalXP} XP</p>
+        <Link href="/shop">
+          <div
+            className="flex items-center justify-center gap-3 rounded-xl px-3 py-3 lg:justify-start cursor-pointer transition-all hover:brightness-110"
+            style={{
+              background: 'linear-gradient(135deg, rgba(129,140,248,0.12), rgba(129,140,248,0.04))',
+              boxShadow: '0 0 0 1px rgba(129,140,248,0.1) inset',
+            }}
+          >
+            <Zap size={18} className="shrink-0 text-primary" />
+            <div className="hidden lg:block min-w-0">
+              <p className="text-xs text-primary/60 truncate">{rankName}</p>
+              <p className="text-sm font-bold text-primary">Ур. {level} · {availableXP} XP</p>
+            </div>
+            <span className="text-xs font-bold text-primary lg:hidden">{level}</span>
           </div>
-          <span className="text-xs font-bold text-primary lg:hidden">{level}</span>
-        </div>
+        </Link>
       </div>
     </aside>
   )

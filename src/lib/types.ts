@@ -10,6 +10,17 @@ export type Task = {
   isRecurring: boolean
   recurringType?: string
   xp: number
+  difficulty?: number  // multiplier: 0.5=easy, 1.0=average, 1.5=hard
+  durationMins?: number // planned duration in minutes
+  timeStart?: string // user-set override, e.g. "14:00"
+  sortOrder?: number  // user-set position within the day
+  duration?: number   // user-set duration override in minutes (ai/design: 120/240/360)
+}
+
+// XP = round(difficulty × durationMins × 25 / 120)
+// difficulty=1.0 + 60min = ~13 XP (calibration target)
+export function calcXP(difficulty: number, durationMins: number): number {
+  return Math.round(difficulty * durationMins * 25 / 120)
 }
 
 export type StreakState = {
@@ -27,6 +38,49 @@ export type DayJob = {
   label?: string
 }
 
+export type JournalEntry = {
+  id: string
+  date: string    // YYYY-MM-DD
+  text: string
+  updatedAt: string  // ISO timestamp
+}
+
+export type VacancyStatus = 'saved' | 'applied' | 'replied' | 'interview' | 'offer' | 'rejected'
+
+export type Vacancy = {
+  id: string
+  company: string
+  position: string
+  sphere: string    // e.g. "Дизайн", "AI"
+  color: string     // hex color for sphere
+  status: VacancyStatus
+  url?: string
+  salary?: string
+  cvId?: string     // ID of CVTemplate used
+  coverLetter?: string
+  appliedAt?: string  // YYYY-MM-DD
+  notes?: string
+  feedback?: string
+  lessons?: string    // what could be improved / mistake made
+  createdAt: string   // ISO timestamp
+}
+
+export type CVTemplate = {
+  id: string
+  title: string     // e.g. "CV Продакт-дизайнер v2"
+  content: string   // full CV / cover letter text
+  createdAt: string
+}
+
+export type Purchase = {
+  id: string
+  itemId: string
+  itemTitle: string
+  price: number
+  purchasedAt: string  // ISO
+  usedAt?: string      // ISO, set when used
+}
+
 export type AppState = {
   tasks: Task[]
   workDays: string[]  // дни с учебными задачами
@@ -38,6 +92,11 @@ export type AppState = {
   // Analytics data
   dailyXP: Record<string, Record<Track, number>>  // YYYY-MM-DD -> {track: xp}
   achievements: string[]  // list of earned achievement IDs
+  journalEntries: JournalEntry[]
+  journalProfiles: Record<string, { text: string; updatedAt: string }>
+  vacancies: Vacancy[]
+  cvTemplates: CVTemplate[]
+  purchases: Purchase[]
 }
 
 export const TRACK_COLORS: Record<Track, string> = {
@@ -60,14 +119,13 @@ export const TRACK_LABELS: Record<Track, string> = {
   gym: 'Зал',
 }
 
-// Polish XP handled specially: 30 for 1h, 15 for 30min
-// See schedule.ts where polish tasks are generated with dynamic XP
+// Legacy fallback XP (used only if difficulty/durationMins not set)
 export const TRACK_XP: Record<Track, number> = {
-  ai: 30,
-  design: 25,
-  selfdevelopment: 20,
-  mediabuy: 25,
-  english: 20,
-  polish: 0,  // Polish XP is dynamic — see schedule.ts (15 or 30)
-  gym: 15,
+  ai: 28,
+  design: 21,
+  selfdevelopment: 13,
+  mediabuy: 14,
+  english: 9,
+  polish: 0,  // Polish XP is dynamic — see schedule.ts
+  gym: 9,
 }

@@ -10,7 +10,7 @@ import { TRACK_COLORS, TRACK_LABELS } from '@/lib/types'
 
 const TRACK_EMOJI: Record<string, string> = {
   ai: '🤖', design: '🎨', selfdevelopment: '🧠',
-  mediabuy: '📈', english: '🇬🇧', polish: '🇵🇱', gym: '💪',
+  mediabuy: '📈', english: '🗣️', polish: '✍️', gym: '💪',
 }
 
 const ALL_TRACKS_ORDERED = ['ai', 'design', 'selfdevelopment', 'mediabuy', 'english', 'polish', 'gym'] as Array<keyof typeof TRACK_COLORS>
@@ -19,12 +19,13 @@ const XP_PER_LEVEL = 200
 const RANK_NAMES = ['Странник', 'Ученик', 'Воин', 'Рыцарь', 'Страж', 'Чемпион', 'Паладин', 'Легенда', 'Архонт']
 
 export default function Dashboard() {
-  const { tasks, streak, trackXP, onboardingDone, processOnOpen, completeTask, skipTask } = useStore()
+  const { tasks, dayJobs, streak, trackXP, onboardingDone, processOnOpen, completeTask, skipTask } = useStore()
 
   useEffect(() => { processOnOpen() }, [processOnOpen])
 
   const today = format(new Date(), 'yyyy-MM-dd')
-  const todayTasks = tasks.filter(t => t.date === today)
+  const todayJob = dayJobs.find(j => j.date === today)
+  const todayTasks = tasks.filter(t => t.date === today && !(todayJob && t.track === 'gym'))
   const doneTodayCount = todayTasks.filter(t => t.completed).length
   const totalXP = Object.values(trackXP).reduce((a, b) => a + b, 0)
   const level = Math.floor(totalXP / XP_PER_LEVEL) + 1
@@ -73,7 +74,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 max-w-3xl">
+    <div className="p-4 sm:p-6 space-y-4">
 
       {/* Header */}
       <div className="space-y-0.5 mb-2">
@@ -327,7 +328,7 @@ export default function Dashboard() {
           <MessageSquare size={15} className="text-white" />
         </div>
         <div className="min-w-0">
-          <p className="font-semibold text-foreground">Обратиться к Оракулу</p>
+          <p className="font-semibold text-foreground">Обратиться к Психологу</p>
           <p className="text-xs text-muted-foreground">Задачи, расписание, мотивация — всё через чат</p>
         </div>
         <ChevronRight size={16} className="ml-auto shrink-0 text-muted-foreground" />

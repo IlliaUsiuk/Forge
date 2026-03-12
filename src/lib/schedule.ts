@@ -1,10 +1,23 @@
 import { parseISO, getDay } from 'date-fns'
 import type { Task, Track } from './types'
-import { TRACK_XP } from './types'
+import { TRACK_XP, calcXP } from './types'
 
 // Day of week: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
 function getDOW(dateStr: string): number {
   return getDay(parseISO(dateStr))
+}
+
+// difficulty × durationMins → XP (1.0 difficulty + 60 min = 25 XP)
+const TASK_CONFIG: Partial<Record<string, { difficulty: number; durationMins: number }>> = {
+  'ai-daily':             { difficulty: 1.1, durationMins: 120 },  // 28 XP
+  'design-daily':         { difficulty: 1.1, durationMins: 90  },  // 21 XP
+  'mediabuy-daily':       { difficulty: 1.1, durationMins: 60  },  // 14 XP
+  'english-homework':     { difficulty: 1.0, durationMins: 45  },  // 19 XP
+  'english-tutor':        { difficulty: 1.0, durationMins: 60  },  // 25 XP
+  'selfdevelopment-daily':{ difficulty: 1.0, durationMins: 60  },  // 25 XP
+  'polish-long':          { difficulty: 1.0, durationMins: 60  },  // 25 XP
+  'polish-short':         { difficulty: 1.0, durationMins: 30  },  // 13 XP
+  'gym-daily':            { difficulty: 0.5, durationMins: 90  },  // 19 XP
 }
 
 function makeTask(
@@ -14,6 +27,9 @@ function makeTask(
   recurringType?: string,
   xpOverride?: number
 ): Task {
+  const configKey = `${track}-${recurringType ?? 'daily'}`
+  const cfg = TASK_CONFIG[configKey]
+  const xp = xpOverride ?? (cfg ? calcXP(cfg.difficulty, cfg.durationMins) : TRACK_XP[track])
   return {
     id: `${track}-${date}-${recurringType ?? 'daily'}-${Math.random().toString(36).slice(2, 7)}`,
     title,
@@ -23,7 +39,9 @@ function makeTask(
     skipped: false,
     isRecurring: true,
     recurringType,
-    xp: xpOverride ?? TRACK_XP[track],
+    xp,
+    difficulty: cfg?.difficulty,
+    durationMins: cfg?.durationMins,
   }
 }
 
@@ -127,14 +145,13 @@ export function generateRecurringTasks(
     }
 
     // Polish: Mon–Fri always
-    // long (60 min, 30 XP) on free days; short (30 min, 15 XP) on Mac days
+    // long (60 min) on free days; short (30 min) on Mac days — XP via calcXP
     if (dow >= 1 && dow <= 5) {
       const isLong = !isMacDay
       const type = isLong ? 'long' : 'short'
       const title = isLong ? 'Польский — 1 час' : 'Польский — 30 мин'
-      const xp = isLong ? 30 : 15
       if (!alreadyExists('polish', date, type)) {
-        newTasks.push(makeTask(title, 'polish', date, type, xp))
+        newTasks.push(makeTask(title, 'polish', date, type))
       }
     }
   }

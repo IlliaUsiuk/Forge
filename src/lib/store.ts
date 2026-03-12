@@ -36,8 +36,8 @@ function checkAchievements(state: AppState, newAchievements: string[]): string[]
 
   return achievements
 }
-import type { Task, Track, AppState, StreakState, DayJob } from './types'
-import { TRACK_XP } from './types'
+import type { Task, Track, AppState, StreakState, DayJob, JournalEntry, Vacancy, CVTemplate, Purchase } from './types'
+import { TRACK_XP, calcXP } from './types'
 import { generateRecurringTasks } from './schedule'
 import { processStreakOnOpen } from './streak'
 
@@ -60,6 +60,12 @@ type Store = AppState & {
   uncompleteTask: (taskId: string) => void
   skipTask: (taskId: string) => void
   deleteTask: (taskId: string) => void
+  updateTaskTime: (taskId: string, timeStart: string | undefined) => void
+  updateTaskDuration: (taskId: string, duration: number | undefined) => void
+  updateTaskTitle: (taskId: string, title: string) => void
+  updateTaskRecurringType: (taskId: string, recurringType: string | undefined) => void
+  reorderTask: (taskId: string, direction: 'up' | 'down') => void
+  moveTaskTo: (taskId: string, targetTaskId: string) => void
   addTask: (task: Omit<Task, 'id' | 'completed' | 'skipped'>) => void
   updateSchedule: (month: string, workDays: string[]) => void
   setDayJobs: (jobs: DayJob[]) => void
@@ -68,6 +74,19 @@ type Store = AppState & {
   clearChatHistory: () => void
   setOnboardingDone: () => void
   processOnOpen: () => void
+  clearOldTasks: (beforeDate: string) => void
+  saveJournalEntry: (date: string, text: string) => void
+  deleteJournalEntry: (id: string) => void
+  setJournalProfile: (month: string, text: string) => void
+  addVacancy: (v: Omit<Vacancy, 'id' | 'createdAt'>) => void
+  updateVacancy: (id: string, changes: Partial<Vacancy>) => void
+  deleteVacancy: (id: string) => void
+  addCVTemplate: (t: Omit<CVTemplate, 'id' | 'createdAt'>) => void
+  updateCVTemplate: (id: string, changes: Partial<CVTemplate>) => void
+  deleteCVTemplate: (id: string) => void
+  buyItem: (item: { id: string; title: string; price: number }) => boolean
+  useItem: (purchaseId: string) => void
+  sellItem: (purchaseId: string) => void
 }
 
 export const useStore = create<Store>()(
@@ -82,6 +101,11 @@ export const useStore = create<Store>()(
       chatHistory: [],
       dailyXP: {},
       achievements: [],
+      journalEntries: [],
+      journalProfiles: {},
+      vacancies: [],
+      cvTemplates: [],
+      purchases: [],
 
       completeTask: (taskId) => {
         const state = get()
@@ -171,6 +195,68 @@ export const useStore = create<Store>()(
         set(s => ({ tasks: s.tasks.filter(t => t.id !== taskId) }))
       },
 
+      updateTaskDuration: (taskId, duration) => {
+        set(s => ({
+          tasks: s.tasks.map(t => {
+            if (t.id !== taskId) return t
+            const newDuration = duration ?? t.durationMins
+            const xp = newDuration ? calcXP(t.difficulty ?? 1.0, newDuration) : t.xp
+            return { ...t, duration, xp }
+          })
+        }))
+      },
+      updateTaskTitle: (taskId, title) => {
+        set(s => ({ tasks: s.tasks.map(t => t.id === taskId ? { ...t, title } : t) }))
+      },
+      updateTaskRecurringType: (taskId, recurringType) => {
+        set(s => ({ tasks: s.tasks.map(t => t.id === taskId ? { ...t, recurringType } : t) }))
+      },
+      updateTaskTime: (taskId, timeStart) => {
+        set(s => ({ tasks: s.tasks.map(t => t.id === taskId ? { ...t, timeStart } : t) }))
+      },
+
+      reorderTask: (taskId, direction) => {
+        set(s => {
+          const task = s.tasks.find(t => t.id === taskId)
+          if (!task) return s
+          // Get all tasks for the same day, sorted by current order
+          const TRACK_ORDER: Record<string, number> = {
+            english: 1, polish: 2, selfdevelopment: 3, ai: 4, design: 5, mediabuy: 6, gym: 7,
+          }
+          const dayTasks = s.tasks
+            .filter(t => t.date === task.date)
+            .sort((a, b) => (a.sortOrder ?? TRACK_ORDER[a.track] ?? 99) - (b.sortOrder ?? TRACK_ORDER[b.track] ?? 99))
+          const idx = dayTasks.findIndex(t => t.id === taskId)
+          const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+          if (swapIdx < 0 || swapIdx >= dayTasks.length) return s
+          // Assign sequential sortOrder to all day tasks, then swap
+          const ordered = dayTasks.map((t, i) => ({ ...t, sortOrder: i }))
+          ordered[idx].sortOrder = swapIdx
+          ordered[swapIdx].sortOrder = idx
+          const updatedMap = Object.fromEntries(ordered.map(t => [t.id, t.sortOrder]))
+          return { tasks: s.tasks.map(t => t.date === task.date ? { ...t, sortOrder: updatedMap[t.id] ?? t.sortOrder } : t) }
+        })
+      },
+
+      moveTaskTo: (taskId, targetTaskId) => {
+        set(s => {
+          const task = s.tasks.find(t => t.id === taskId)
+          if (!task) return s
+          const TRACK_ORD: Record<string, number> = { english: 1, polish: 2, selfdevelopment: 3, ai: 4, design: 5, mediabuy: 6, gym: 7 }
+          const dayTasks = s.tasks
+            .filter(t => t.date === task.date)
+            .sort((a, b) => (a.sortOrder ?? TRACK_ORD[a.track] ?? 99) - (b.sortOrder ?? TRACK_ORD[b.track] ?? 99))
+          const fromIdx = dayTasks.findIndex(t => t.id === taskId)
+          const toIdx = dayTasks.findIndex(t => t.id === targetTaskId)
+          if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return s
+          const reordered = [...dayTasks]
+          const [moved] = reordered.splice(fromIdx, 1)
+          reordered.splice(toIdx, 0, moved)
+          const updatedMap = Object.fromEntries(reordered.map((t, i) => [t.id, i]))
+          return { tasks: s.tasks.map(t => t.date === task.date ? { ...t, sortOrder: updatedMap[t.id] ?? t.sortOrder } : t) }
+        })
+      },
+
       addTask: (taskData) => {
         const newTask: Task = {
           ...taskData,
@@ -239,6 +325,86 @@ export const useStore = create<Store>()(
       clearChatHistory: () => set({ chatHistory: [] }),
       setOnboardingDone: () => set({ onboardingDone: true }),
 
+      clearOldTasks: (beforeDate) => {
+        set(s => ({
+          tasks: s.tasks.filter(t => t.date >= beforeDate),
+          workDays: s.workDays.filter(d => d >= beforeDate),
+          dayJobs: s.dayJobs.filter(j => j.date >= beforeDate),
+        }))
+      },
+
+      saveJournalEntry: (date, text) => {
+        set(s => {
+          const existing = s.journalEntries.find(e => e.date === date)
+          if (existing) {
+            return { journalEntries: s.journalEntries.map(e => e.id === existing.id ? { ...e, text, updatedAt: new Date().toISOString() } : e) }
+          }
+          const entry: JournalEntry = { id: `journal-${date}`, date, text, updatedAt: new Date().toISOString() }
+          return { journalEntries: [...s.journalEntries, entry] }
+        })
+      },
+      deleteJournalEntry: (id) => {
+        set(s => ({ journalEntries: s.journalEntries.filter(e => e.id !== id) }))
+      },
+
+      setJournalProfile: (month, text) => {
+        set(s => ({
+          journalProfiles: {
+            ...s.journalProfiles,
+            [month]: { text, updatedAt: new Date().toISOString() },
+          },
+        }))
+      },
+
+      addVacancy: (v) => {
+        const vacancy: Vacancy = { ...v, id: `vac-${Date.now()}`, createdAt: new Date().toISOString() }
+        set(s => ({ vacancies: [...s.vacancies, vacancy] }))
+      },
+      updateVacancy: (id, changes) => {
+        set(s => ({ vacancies: s.vacancies.map(v => v.id === id ? { ...v, ...changes } : v) }))
+      },
+      deleteVacancy: (id) => {
+        set(s => ({ vacancies: s.vacancies.filter(v => v.id !== id) }))
+      },
+      addCVTemplate: (t) => {
+        const cv: CVTemplate = { ...t, id: `cv-${Date.now()}`, createdAt: new Date().toISOString() }
+        set(s => ({ cvTemplates: [...s.cvTemplates, cv] }))
+      },
+      updateCVTemplate: (id, changes) => {
+        set(s => ({ cvTemplates: s.cvTemplates.map(c => c.id === id ? { ...c, ...changes } : c) }))
+      },
+      deleteCVTemplate: (id) => {
+        set(s => ({ cvTemplates: s.cvTemplates.filter(c => c.id !== id) }))
+      },
+
+      buyItem: (item) => {
+        const state = get()
+        const totalXP = Object.values(state.trackXP).reduce((a, b) => a + b, 0)
+        const spentXP = state.purchases.reduce((s, p) => s + p.price, 0)
+        if (totalXP - spentXP < item.price) return false
+        const purchase: Purchase = {
+          id: `purchase-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          itemId: item.id,
+          itemTitle: item.title,
+          price: item.price,
+          purchasedAt: new Date().toISOString(),
+        }
+        set(s => ({ purchases: [...s.purchases, purchase] }))
+        return true
+      },
+
+      useItem: (purchaseId) => {
+        set(s => ({
+          purchases: s.purchases.map(p =>
+            p.id === purchaseId ? { ...p, usedAt: new Date().toISOString() } : p
+          ),
+        }))
+      },
+
+      sellItem: (purchaseId) => {
+        set(s => ({ purchases: s.purchases.filter(p => p.id !== purchaseId) }))
+      },
+
       processOnOpen: () => {
         const state = get()
         const today = format(new Date(), 'yyyy-MM-dd')
@@ -253,6 +419,40 @@ export const useStore = create<Store>()(
         }
       },
     }),
-    { name: 'personal-dashboard-storage' }
+    {
+      name: 'personal-dashboard-storage',
+      version: 3,
+      migrate: (persisted: unknown, fromVersion: number) => {
+        let state = persisted as AppState & { purchases?: Purchase[] }
+        if (fromVersion < 2) {
+          // Migrate to new XP formula: difficulty × durationMins × 25/120
+          const XP_MAP: Record<string, { difficulty: number; durationMins: number }> = {
+            'ai-daily':              { difficulty: 1.1, durationMins: 120 },
+            'design-daily':          { difficulty: 1.1, durationMins: 90  },
+            'mediabuy-daily':        { difficulty: 1.1, durationMins: 60  },
+            'english-homework':      { difficulty: 1.0, durationMins: 45  },
+            'english-tutor':         { difficulty: 1.0, durationMins: 60  },
+            'selfdevelopment-daily': { difficulty: 1.0, durationMins: 60  },
+            'polish-long':           { difficulty: 1.0, durationMins: 60  },
+            'polish-short':          { difficulty: 1.0, durationMins: 30  },
+            'gym-daily':             { difficulty: 0.5, durationMins: 90  },
+          }
+          const migratedTasks = state.tasks.map(t => {
+            if (t.completed) return t  // don't touch earned XP
+            const key = `${t.track}-${t.recurringType ?? 'daily'}`
+            const cfg = XP_MAP[key]
+            if (!cfg) return t
+            const dur = t.duration ?? cfg.durationMins
+            const xp = Math.round(cfg.difficulty * dur * 25 / 120)
+            return { ...t, xp, difficulty: cfg.difficulty, durationMins: cfg.durationMins }
+          })
+          state = { ...state, tasks: migratedTasks }
+        }
+        if (fromVersion < 3) {
+          if (!state.purchases) state = { ...state, purchases: [] }
+        }
+        return state
+      },
+    }
   )
 )

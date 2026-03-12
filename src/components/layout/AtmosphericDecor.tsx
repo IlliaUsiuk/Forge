@@ -115,6 +115,30 @@ export function AtmosphericDecor() {
         </div>
       </div>
 
+      {/* ── River strip — flows left to right below the fire ── */}
+      <div className="absolute bottom-5 right-0 w-52 overflow-hidden" style={{ height: 3 }}>
+        <div
+          className="animate-river-flow h-full"
+          style={{
+            width: '200%',
+            background:
+              'linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.35) 15%, rgba(96,165,250,0.65) 30%, rgba(147,197,253,0.45) 45%, transparent 50%, transparent 50%, rgba(59,130,246,0.35) 65%, rgba(96,165,250,0.65) 80%, rgba(147,197,253,0.45) 90%, transparent 100%)',
+          }}
+        />
+      </div>
+      {/* Second river layer — offset for depth */}
+      <div className="absolute bottom-3.5 right-4 w-40 overflow-hidden" style={{ height: 2 }}>
+        <div
+          className="animate-river-flow h-full"
+          style={{
+            width: '200%',
+            animationDelay: '-2s',
+            background:
+              'linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.2) 20%, rgba(96,165,250,0.4) 35%, transparent 50%, transparent 50%, rgba(59,130,246,0.2) 70%, rgba(96,165,250,0.4) 85%, transparent 100%)',
+          }}
+        />
+      </div>
+
     </div>
   )
 }
