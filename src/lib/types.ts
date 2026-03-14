@@ -20,7 +20,7 @@ export type Task = {
 // XP = round(difficulty × durationMins × 25 / 120)
 // difficulty=1.0 + 60min = ~13 XP (calibration target)
 export function calcXP(difficulty: number, durationMins: number): number {
-  return Math.round(difficulty * durationMins * 25 / 120)
+  return Math.round(difficulty * durationMins * 25 / 60)
 }
 
 export type StreakState = {

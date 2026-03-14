@@ -76,6 +76,7 @@ export default function JournalPage() {
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'pending' | 'saved'>('idle')
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const statusTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (sessionStorage.getItem(SESSION_KEY) === '1') setUnlocked(true)
@@ -85,18 +86,28 @@ export default function JournalPage() {
   const text = draft[selectedDate] ?? entry?.text ?? ''
   const isDirty = text !== (entry?.text ?? '') && text.trim().length > 0
 
-  // Autosave: 1.5s debounce after typing stops (must be before early return)
+  // Autosave: 1.5s debounce. On date switch — saves immediately if dirty.
   useEffect(() => {
     if (!unlocked || !isDirty) return
     setAutoSaveStatus('pending')
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    const capturedDate = selectedDate
+    const capturedText = text.trim()
     autoSaveTimer.current = setTimeout(() => {
-      saveJournalEntry(selectedDate, text.trim())
-      setDraft(d => { const n = { ...d }; delete n[selectedDate]; return n })
+      saveJournalEntry(capturedDate, capturedText)
+      setDraft(d => { const n = { ...d }; delete n[capturedDate]; return n })
       setAutoSaveStatus('saved')
-      setTimeout(() => setAutoSaveStatus('idle'), 2000)
+      if (statusTimer.current) clearTimeout(statusTimer.current)
+      statusTimer.current = setTimeout(() => setAutoSaveStatus('idle'), 2000)
     }, 1500)
-    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+    return () => {
+      if (autoSaveTimer.current) {
+        clearTimeout(autoSaveTimer.current)
+        autoSaveTimer.current = null
+        saveJournalEntry(capturedDate, capturedText)
+        setDraft(d => { const n = { ...d }; delete n[capturedDate]; return n })
+      }
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, selectedDate, unlocked])
 
