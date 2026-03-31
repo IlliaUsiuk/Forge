@@ -62,42 +62,6 @@ export type JournalEntry = {
   updatedAt: string
 }
 
-export type VacancyStatus = 'saved' | 'applied' | 'replied' | 'interview' | 'offer' | 'rejected'
-
-export type Vacancy = {
-  id: string
-  company: string
-  position: string
-  sphere: string
-  color: string
-  status: VacancyStatus
-  url?: string
-  salary?: string
-  cvId?: string
-  coverLetter?: string
-  appliedAt?: string
-  notes?: string
-  feedback?: string
-  lessons?: string
-  createdAt: string
-}
-
-export type CVTemplate = {
-  id: string
-  title: string
-  content: string
-  createdAt: string
-}
-
-export type Purchase = {
-  id: string
-  itemId: string
-  itemTitle: string
-  price: number
-  purchasedAt: string
-  usedAt?: string
-}
-
 export type ScheduleSettings = {
   wakeTime: string          // "HH:MM", default "07:00"
   commuteToWorkMin: number  // minutes to get to work, default 30
@@ -129,10 +93,6 @@ export type AppState = {
   achievements: string[]
   journalEntries: JournalEntry[]
   journalProfiles: Record<string, { text: string; updatedAt: string }>
-  vacancies: Vacancy[]
-  cvTemplates: CVTemplate[]
-  purchases: Purchase[]
-  routineChecks: Record<string, string[]>
   categories: Category[]
   templateTasks: TemplateTask[]
 }

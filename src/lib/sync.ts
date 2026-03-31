@@ -68,8 +68,7 @@ export async function saveUserData(userId: string) {
     'streak', 'trackXP', 'onboardingDone',
     'chatHistory', 'dailyXP', 'achievements',
     'journalEntries', 'journalProfiles',
-    'categories', 'templateTasks',
-    'routineChecks', 'scheduleSettings',
+    'categories', 'templateTasks', 'scheduleSettings',
   ]
 
   for (const key of keys) {
@@ -104,7 +103,7 @@ export async function createBackupIfNeeded(userId: string) {
     'userName', 'avatarUrl', 'tasks', 'workDays', 'dayJobs',
     'streak', 'trackXP', 'dailyXP', 'achievements',
     'journalEntries', 'journalProfiles',
-    'categories', 'templateTasks', 'routineChecks', 'scheduleSettings',
+    'categories', 'templateTasks', 'scheduleSettings',
   ]
   for (const key of keys) data[key] = state[key]
 
@@ -150,7 +149,6 @@ export async function signOut() {
     journalProfiles: {},
     categories: [],
     templateTasks: [],
-    routineChecks: {},
     scheduleSettings: { wakeTime: '07:00', commuteToWorkMin: 30, prepMin: 60, departBufMin: 10 },
   })
 }

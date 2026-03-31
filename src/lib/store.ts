@@ -131,15 +131,12 @@ type Store = AppState & {
   updateTaskTime: (taskId: string, timeStart: string | undefined) => void
   updateTaskDuration: (taskId: string, durationMins: number | undefined) => void
   updateTaskTitle: (taskId: string, title: string) => void
-  reorderTask: (taskId: string, direction: 'up' | 'down') => void
   moveTaskTo: (taskId: string, targetTaskId: string) => void
   addTask: (task: Omit<Task, 'id' | 'completed' | 'skipped'>) => void
   updateSchedule: (month: string, workDays: string[]) => void
   setDayJobs: (jobs: DayJob[]) => void
-  deleteRecurringSeries: (track: Track) => void
   setOnboardingDone: () => void
   processOnOpen: () => void
-  clearOldTasks: (beforeDate: string) => void
   saveJournalEntry: (date: string, text: string) => void
   deleteJournalEntry: (id: string) => void
   setJournalProfile: (month: string, text: string) => void
@@ -167,10 +164,6 @@ export const useStore = create<Store>()((set, get) => ({
       achievements: [],
       journalEntries: [],
       journalProfiles: {},
-      vacancies: [],
-      cvTemplates: [],
-      purchases: [],
-      routineChecks: {},
       categories: [],
       templateTasks: [],
       scheduleSettings: DEFAULT_SCHEDULE_SETTINGS,
@@ -302,22 +295,6 @@ export const useStore = create<Store>()((set, get) => ({
         set(s => ({ tasks: s.tasks.map(t => t.id === taskId ? { ...t, timeStart } : t) }))
       },
 
-      reorderTask: (taskId, direction) => {
-        set(s => {
-          const task = s.tasks.find(t => t.id === taskId)
-          if (!task) return s
-          const dayTasks = s.tasks.filter(t => t.date === task.date).sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99))
-          const idx = dayTasks.findIndex(t => t.id === taskId)
-          const swapIdx = direction === 'up' ? idx - 1 : idx + 1
-          if (swapIdx < 0 || swapIdx >= dayTasks.length) return s
-          const ordered = dayTasks.map((t, i) => ({ ...t, sortOrder: i }))
-          ordered[idx].sortOrder = swapIdx
-          ordered[swapIdx].sortOrder = idx
-          const updatedMap = Object.fromEntries(ordered.map(t => [t.id, t.sortOrder]))
-          return { tasks: s.tasks.map(t => t.date === task.date ? { ...t, sortOrder: updatedMap[t.id] ?? t.sortOrder } : t) }
-        })
-      },
-
       moveTaskTo: (taskId, targetTaskId) => {
         set(s => {
           const task = s.tasks.find(t => t.id === taskId)
@@ -378,19 +355,7 @@ export const useStore = create<Store>()((set, get) => ({
         })
       },
 
-      deleteRecurringSeries: (track) => {
-        set(s => ({ tasks: s.tasks.filter(t => !(t.isRecurring && t.track === track)) }))
-      },
-
       setOnboardingDone: () => set({ onboardingDone: true }),
-
-      clearOldTasks: (beforeDate) => {
-        set(s => ({
-          tasks: s.tasks.filter(t => t.date >= beforeDate),
-          workDays: s.workDays.filter(d => d >= beforeDate),
-          dayJobs: s.dayJobs.filter(j => j.date >= beforeDate),
-        }))
-      },
 
       saveJournalEntry: (date, text) => {
         set(s => {

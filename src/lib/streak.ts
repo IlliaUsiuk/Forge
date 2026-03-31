@@ -1,6 +1,7 @@
 import { format, parseISO, addDays, isBefore, isEqual } from 'date-fns'
 import type { Task, StreakState } from './types'
 
+
 // Returns true if a given date had at least one completed (non-skipped) task
 function hadCompletedTask(tasks: Task[], date: string): boolean {
   return tasks.some(t => t.date === date && t.completed && !t.skipped)
@@ -65,26 +66,4 @@ export function processStreakOnOpen(
   }
 
   return current
-}
-
-// Recalculate streak from scratch based on task history
-export function recalculateStreak(tasks: Task[], today: string): StreakState {
-  // Get all unique dates with tasks, sorted
-  const allDates = [...new Set(tasks.map(t => t.date))].sort()
-
-  let current = 0
-  let longest = 0
-  let lastActiveDate = ''
-  let freezeUsedMonth: string | null = null
-
-  for (const date of allDates) {
-    if (date > today) break
-    if (hadCompletedTask(tasks, date)) {
-      current += 1
-      lastActiveDate = date
-      if (current > longest) longest = current
-    }
-  }
-
-  return { current, longest, lastActiveDate, freezeUsedMonth }
 }
