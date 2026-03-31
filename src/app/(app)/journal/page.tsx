@@ -77,7 +77,7 @@ function LockScreen({ onUnlock, password, onSetPassword }: { onUnlock: () => voi
 }
 
 export default function JournalPage() {
-  const { journalEntries, saveJournalEntry, deleteJournalEntry, journalProfiles, setJournalProfile, password, setPassword, userName } = useStore()
+  const { journalEntries, saveJournalEntry, deleteJournalEntry, journalProfiles, setJournalProfile, password, setPassword, userName, apiKey } = useStore()
   const [unlocked, setUnlocked] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null)
@@ -148,7 +148,7 @@ export default function JournalPage() {
       const res = await fetch('/api/journal-analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ month: currentMonth, entries: monthEntries, existingProfiles: journalProfiles, userName }),
+        body: JSON.stringify({ month: currentMonth, entries: monthEntries, existingProfiles: journalProfiles, userName, apiKey }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Ошибка')

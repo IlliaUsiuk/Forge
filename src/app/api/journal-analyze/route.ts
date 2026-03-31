@@ -3,18 +3,16 @@ import Anthropic from '@anthropic-ai/sdk'
 
 export const maxDuration = 60
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
 export async function POST(req: NextRequest) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ error: 'ANTHROPIC_API_KEY не найден' }, { status: 500 })
-  }
-
   try {
-    const { month, entries, existingProfiles, userName } = await req.json()
+    const { month, entries, existingProfiles, userName, apiKey } = await req.json()
+
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Добавь API ключ Anthropic в профиле' }, { status: 400 })
+    }
+
+    const client = new Anthropic({ apiKey })
     const name = (userName as string)?.trim() || 'пользователь'
-    // entries: JournalEntry[] for the target month
-    // existingProfiles: Record<string, { text, updatedAt }> — all previous months
 
     if (!entries || entries.length === 0) {
       return NextResponse.json({ error: 'Нет записей за этот месяц' }, { status: 400 })
