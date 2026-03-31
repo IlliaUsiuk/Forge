@@ -3,12 +3,10 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, CalendarDays, BookMarked, Layers, Bot, LogOut,
+  LayoutDashboard, CalendarDays, BookMarked, Layers, Bot,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
-import { signOut } from '@/lib/sync'
-import { useRouter } from 'next/navigation'
 
 const NAV = [
   { href: '/',          icon: LayoutDashboard, label: 'Главная' },
@@ -21,13 +19,7 @@ const NAV = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const router = useRouter()
   const { userName, avatarUrl } = useStore()
-
-  async function handleSignOut() {
-    await signOut()
-    router.push('/login')
-  }
 
   const firstLetter = userName.trim().charAt(0).toUpperCase() || '?'
 
@@ -86,18 +78,6 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="flex-1" />
-
-      <div className="flex w-full flex-col gap-2">
-        <button
-          onClick={handleSignOut}
-          className="flex w-full items-center justify-center gap-3 rounded-xl px-3 py-2.5 text-muted-foreground transition-all hover:text-red-400 lg:justify-start"
-          style={{ background: 'rgba(255,255,255,0.03)' }}
-        >
-          <LogOut size={18} className="shrink-0" />
-          <span className="hidden text-sm lg:block">Выйти</span>
-        </button>
-      </div>
     </aside>
   )
 }

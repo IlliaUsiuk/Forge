@@ -1,14 +1,17 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { useStore } from '@/lib/store'
-import { CheckCircle2, Pencil, X, Lock, Camera, AlertTriangle, Eye, EyeOff } from 'lucide-react'
+import { signOut } from '@/lib/sync'
+import { CheckCircle2, Pencil, X, Lock, Camera, AlertTriangle, Eye, EyeOff, LogOut } from 'lucide-react'
 
 const RANK_NAMES = ['Новичок', 'Стажёр', 'Специалист', 'Профи', 'Эксперт', 'Мастер', 'Гуру', 'Легенда', 'Элита']
 const XP_PER_LEVEL = 200
 
 
 export default function ProfilePage() {
+  const router = useRouter()
   const {
     userName, setUserName,
     password, setPassword,
@@ -17,6 +20,11 @@ export default function ProfilePage() {
     scheduleSettings, setScheduleSettings,
     apiKey, setApiKey,
   } = useStore()
+
+  async function handleSignOut() {
+    await signOut()
+    router.push('/login')
+  }
 
   const [editingName, setEditingName] = useState(false)
   const [draftName, setDraftName] = useState(userName)
@@ -373,6 +381,16 @@ export default function ProfilePage() {
         </div>
         <p className="text-xs text-muted-foreground">Используется для расчёта времени выезда на работу</p>
       </div>
+
+      {/* Sign out */}
+      <button
+        onClick={handleSignOut}
+        className="flex items-center gap-2.5 rounded-2xl px-5 py-3.5 text-sm font-medium transition-all hover:brightness-125 w-full"
+        style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: '#f87171' }}
+      >
+        <LogOut size={16} />
+        Выйти из аккаунта
+      </button>
 
     </div>
 
