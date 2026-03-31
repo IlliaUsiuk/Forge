@@ -124,12 +124,11 @@ export async function POST(req: NextRequest) {
     const { messages, context, apiKey: clientApiKey, mode } = await req.json()
     const isPsychologist = mode === 'psychologist'
 
-    const resolvedKey = clientApiKey || process.env.ANTHROPIC_API_KEY
-    if (!resolvedKey) {
-      return NextResponse.json({ error: 'API ключ не найден. Добавь свой Anthropic API ключ в настройках чата.' }, { status: 400 })
+    if (!clientApiKey) {
+      return NextResponse.json({ error: 'API ключ не найден. Добавь свой Anthropic API ключ в профиле.' }, { status: 400 })
     }
 
-    const client = new Anthropic({ apiKey: resolvedKey })
+    const client = new Anthropic({ apiKey: clientApiKey })
 
     type PoolCard = { id: string; title: string; track: string; categoryLabel: string; xp: number; durationMins: number; weeklyFrequency: number | null; defaultTimeStart: string | null }
     const poolInfo = context.poolCards?.length > 0
