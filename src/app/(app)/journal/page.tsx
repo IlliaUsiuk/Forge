@@ -1,105 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { playError, playClick } from '@/lib/sounds'
+import { playError } from '@/lib/sounds'
 import { format, addDays } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import Link from 'next/link'
-import { Trash2, Lock, Brain, CheckCircle2, Loader2, MessageSquare, Settings, X, Download } from 'lucide-react'
+import { Trash2, Brain, CheckCircle2, Loader2, MessageSquare, Download } from 'lucide-react'
 import { useStore } from '@/lib/store'
 
-function LockScreen({ onUnlock, password, onSetPassword }: { onUnlock: () => void; password: string; onSetPassword: (p: string) => void }) {
-  const [input, setInput] = useState('')
-  const [error, setError] = useState(false)
-  const isSettingUp = !password
-
-  function handleSubmit(e: { preventDefault(): void }) {
-    e.preventDefault()
-    if (isSettingUp) {
-      if (input.length < 2) return
-      onSetPassword(input)
-      onUnlock()
-      return
-    }
-    if (input === password) {
-      playClick()
-      onUnlock()
-    } else {
-      playError()
-      setError(true)
-      setInput('')
-      setTimeout(() => setError(false), 1500)
-    }
-  }
-
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-6 p-8">
-      <div
-        className="flex h-14 w-14 items-center justify-center rounded-2xl"
-        style={{ background: 'linear-gradient(135deg, rgba(129,140,248,0.2), rgba(167,139,250,0.1))', boxShadow: '0 0 0 1px rgba(129,140,248,0.2) inset' }}
-      >
-        <Lock size={22} style={{ color: '#818cf8' }} />
-      </div>
-      <div className="text-center">
-        <h2 className="text-xl font-bold text-white">{isSettingUp ? 'Защити дневник' : 'Дневник заперт'}</h2>
-        <p className="text-sm text-white/40 mt-1">{isSettingUp ? 'Придумай пароль для входа' : 'Введи пароль чтобы войти'}</p>
-      </div>
-      <form onSubmit={handleSubmit} className="flex flex-col items-center gap-3 w-full max-w-xs">
-        <input
-          type="password"
-          value={input}
-          onChange={e => { setInput(e.target.value); setError(false) }}
-          autoFocus
-          autoComplete="new-password"
-          placeholder={isSettingUp ? 'Придумай пароль' : 'Пароль'}
-          className="w-full rounded-xl px-4 py-3 text-center text-lg font-bold tracking-widest outline-none transition-all"
-          style={{
-            background: error ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)',
-            border: `1px solid ${error ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)'}`,
-            color: error ? '#ef4444' : 'white',
-          }}
-        />
-        {error && <p className="text-xs text-red-400">Неверный пароль</p>}
-        {isSettingUp && input.length > 0 && input.length < 2 && (
-          <p className="text-xs text-white/30">Минимум 2 символа</p>
-        )}
-        <button
-          type="submit"
-          disabled={isSettingUp && input.length < 2}
-          className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-all disabled:opacity-40"
-          style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}
-        >
-          {isSettingUp ? 'Установить пароль' : 'Войти'}
-        </button>
-      </form>
-    </div>
-  )
-}
-
 export default function JournalPage() {
-  const { journalEntries, saveJournalEntry, deleteJournalEntry, journalProfiles, setJournalProfile, password, setPassword, userName, apiKey } = useStore()
-  const [unlocked, setUnlocked] = useState(false)
+  const { journalEntries, saveJournalEntry, deleteJournalEntry, journalProfiles, setJournalProfile, userName, apiKey } = useStore()
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null)
-  const [changingPassword, setChangingPassword] = useState(false)
-  const [newPassword, setNewPassword] = useState('')
-  const [pwMsg, setPwMsg] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
   const today = format(new Date(), 'yyyy-MM-dd')
   const currentMonth = today.slice(0, 7)
   const [selectedDate, setSelectedDate] = useState(today)
   if (!mounted) return null
-  if (!unlocked) return <LockScreen onUnlock={() => setUnlocked(true)} password={password} onSetPassword={setPassword} />
-
-  function handleChangePassword(e: { preventDefault(): void }) {
-    e.preventDefault()
-    if (!newPassword.trim() || newPassword.length < 2) { setPwMsg('Минимум 2 символа'); return }
-    setPassword(newPassword.trim())
-    setNewPassword('')
-    setChangingPassword(false)
-    setPwMsg(null)
-  }
 
   const entry = journalEntries.find(e => e.date === selectedDate)
   const text = entry?.text ?? ''
@@ -206,32 +124,7 @@ export default function JournalPage() {
               <Download size={14} />
               Скачать
             </button>
-            <button
-              onClick={() => setChangingPassword(v => !v)}
-              className="flex items-center justify-center rounded-xl p-2 transition-all hover:text-foreground"
-              style={btnStyle}
-              title="Сменить пароль"
-            >
-              {changingPassword ? <X size={14} /> : <Settings size={14} />}
-            </button>
           </div>
-          {changingPassword && (
-            <form onSubmit={handleChangePassword} className="flex items-center gap-2 mt-1">
-              <input
-                type="password"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                placeholder="Новый пароль"
-                autoFocus
-                className="rounded-xl px-3 py-1.5 text-sm outline-none"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: 140 }}
-              />
-              <button type="submit" className="rounded-xl px-3 py-1.5 text-sm font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}>
-                Сохранить
-              </button>
-              {pwMsg && <span className="text-xs text-red-400">{pwMsg}</span>}
-            </form>
-          )}
           {analyzeMsg && (
             <p className="flex items-center gap-1.5 text-xs" style={{ color: analyzeMsg === 'База обновлена' ? '#34d399' : '#f87171' }}>
               {analyzeMsg === 'База обновлена' && <CheckCircle2 size={11} />}

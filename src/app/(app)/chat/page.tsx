@@ -145,15 +145,12 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false)
   const [lastActions, setLastActions] = useState<string[]>([])
   const [showKeySettings, setShowKeySettings] = useState(false)
-  const [unlocked, setUnlocked] = useState(false)
-  const [lockInput, setLockInput] = useState('')
-  const [lockError, setLockError] = useState(false)
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const { chatHistory, addChatMessage, tasks, streak, trackXP, workDays, dayJobs,
-    journalEntries, journalProfiles, userName, apiKey, setApiKey, password, setPassword,
+    journalEntries, journalProfiles, userName, apiKey, setApiKey,
     templateTasks, categories,
     updateSchedule, setDayJobs, addTask, completeTask, uncompleteTask, skipTask, setOnboardingDone } = useStore()
 
@@ -161,73 +158,7 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatHistory, loading])
 
-  const isSettingUp = !password
-
   if (!mounted) return null
-
-  if (!unlocked) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-6 p-8">
-        <div
-          className="flex h-14 w-14 items-center justify-center rounded-2xl"
-          style={{ background: 'linear-gradient(135deg, rgba(129,140,248,0.2), rgba(167,139,250,0.1))', boxShadow: '0 0 0 1px rgba(129,140,248,0.2) inset' }}
-        >
-          <Key size={22} style={{ color: '#818cf8' }} />
-        </div>
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-white">{isSettingUp ? 'Защити помощника' : 'Помощник заперт'}</h2>
-          <p className="text-sm text-white/40 mt-1">{isSettingUp ? 'Придумай пароль для входа' : 'Введи пароль чтобы войти'}</p>
-        </div>
-        <form
-          onSubmit={e => {
-            e.preventDefault()
-            if (isSettingUp) {
-              if (lockInput.length < 2) return
-              setPassword(lockInput)
-              setUnlocked(true)
-              return
-            }
-            if (lockInput === password) {
-              playClick()
-              setUnlocked(true)
-            } else {
-              playError()
-              setLockError(true)
-              setLockInput('')
-              setTimeout(() => setLockError(false), 1500)
-            }
-          }}
-          className="flex flex-col items-center gap-3 w-full max-w-xs"
-        >
-          <input
-            type="password"
-            value={lockInput}
-            onChange={e => { setLockInput(e.target.value); setLockError(false) }}
-            autoFocus
-            placeholder={isSettingUp ? 'Придумай пароль' : 'Пароль'}
-            className="w-full rounded-xl px-4 py-3 text-center text-lg font-bold tracking-widest outline-none transition-all"
-            style={{
-              background: lockError ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${lockError ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)'}`,
-              color: lockError ? '#ef4444' : 'white',
-            }}
-          />
-          {lockError && <p className="text-xs text-red-400">Неверный пароль</p>}
-          {isSettingUp && lockInput.length > 0 && lockInput.length < 2 && (
-            <p className="text-xs text-white/30">Минимум 2 символа</p>
-          )}
-          <button
-            type="submit"
-            disabled={isSettingUp && lockInput.length < 2}
-            className="w-full rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-40"
-            style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}
-          >
-            {isSettingUp ? 'Установить пароль' : 'Войти'}
-          </button>
-        </form>
-      </div>
-    )
-  }
 
   if (!apiKey && !showKeySettings) {
     return <ApiKeySetup onSave={(key) => { setApiKey(key) }} />
