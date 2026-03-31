@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { Send, Loader2, Bot, User, CheckCircle2, Key, ExternalLink, Settings, X } from 'lucide-react'
+import { Send, Loader2, Bot, User, CheckCircle2, Key } from 'lucide-react'
+import Link from 'next/link'
 import { playError, playClick } from '@/lib/sounds'
 import { useStore } from '@/lib/store'
 import type { Track, DayJob } from '@/lib/types'
@@ -55,96 +56,11 @@ type Action =
   | { type: 'skipTask'; taskId: string }
   | { type: 'resetData' }
 
-function ApiKeySetup({ onSave }: { onSave: (key: string) => void }) {
-  const [input, setInput] = useState('')
-  const [error, setError] = useState('')
-
-  function handleSubmit(e: { preventDefault(): void }) {
-    e.preventDefault()
-    const key = input.trim()
-    if (!key.startsWith('sk-ant-')) {
-      setError('Ключ должен начинаться с sk-ant-...')
-      return
-    }
-    onSave(key)
-  }
-
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-6 p-8">
-      <div
-        className="flex h-14 w-14 items-center justify-center rounded-2xl"
-        style={{ background: 'linear-gradient(135deg, rgba(129,140,248,0.2), rgba(167,139,250,0.1))', boxShadow: '0 0 0 1px rgba(129,140,248,0.2) inset' }}
-      >
-        <Key size={22} style={{ color: '#818cf8' }} />
-      </div>
-      <div className="text-center">
-        <h2 className="text-xl font-bold text-foreground">Добавь API ключ</h2>
-        <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-          Помощник работает через Anthropic API. Добавь свой ключ — он хранится только на твоём устройстве.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3 w-full max-w-sm">
-        <input
-          type="password"
-          value={input}
-          onChange={e => { setInput(e.target.value); setError('') }}
-          placeholder="sk-ant-api03-..."
-          autoComplete="off"
-          className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
-          style={{
-            background: error ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.05)',
-            border: `1px solid ${error ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)'}`,
-            color: 'white',
-          }}
-        />
-        {error && <p className="text-xs text-red-400 -mt-1">{error}</p>}
-        <button
-          type="submit"
-          className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}
-        >
-          Сохранить и открыть чат
-        </button>
-      </form>
-
-      <div className="flex flex-col gap-2 w-full max-w-sm">
-        <p className="text-xs text-muted-foreground text-center mb-1">Где взять ключ?</p>
-        <div
-          className="flex items-center gap-3 rounded-xl p-3 text-sm"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          <span className="text-base">1️⃣</span>
-          <span className="text-muted-foreground">Зайди на <span className="text-primary">console.anthropic.com</span></span>
-          <ExternalLink size={13} className="ml-auto shrink-0 text-muted-foreground" />
-        </div>
-        <div
-          className="flex items-center gap-3 rounded-xl p-3 text-sm"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          <span className="text-base">2️⃣</span>
-          <span className="text-muted-foreground">API Keys → Create Key</span>
-        </div>
-        <div
-          className="flex items-center gap-3 rounded-xl p-3 text-sm"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          <span className="text-base">3️⃣</span>
-          <span className="text-muted-foreground">Скопируй и вставь сюда</span>
-        </div>
-        <p className="text-xs text-muted-foreground text-center mt-1">
-          🔒 Ключ сохраняется локально и никуда не передаётся
-        </p>
-      </div>
-    </div>
-  )
-}
 
 export default function ChatPage() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [lastActions, setLastActions] = useState<string[]>([])
-  const [showKeySettings, setShowKeySettings] = useState(false)
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -160,20 +76,19 @@ export default function ChatPage() {
 
   if (!mounted) return null
 
-  if (!apiKey && !showKeySettings) {
-    return <ApiKeySetup onSave={(key) => { setApiKey(key) }} />
-  }
-
-  if (showKeySettings) {
+  if (!apiKey) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-6 p-8">
-        <button
-          onClick={() => setShowKeySettings(false)}
-          className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full hover:bg-white/5 transition-colors"
-        >
-          <X size={16} className="text-muted-foreground" />
-        </button>
-        <ApiKeySetup onSave={(key) => { setApiKey(key); setShowKeySettings(false) }} />
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: 'linear-gradient(135deg, rgba(129,140,248,0.2), rgba(167,139,250,0.1))', boxShadow: '0 0 0 1px rgba(129,140,248,0.2) inset' }}>
+          <Key size={22} style={{ color: '#818cf8' }} />
+        </div>
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-foreground">Нужен API ключ</h2>
+          <p className="text-sm text-muted-foreground mt-1 max-w-xs">Добавь свой Anthropic API ключ в профиле чтобы использовать помощника</p>
+        </div>
+        <Link href="/profile" className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}>
+          Перейти в профиль
+        </Link>
       </div>
     )
   }
@@ -290,13 +205,9 @@ export default function ChatPage() {
             <h1 className="text-sm font-semibold text-foreground">Помощник</h1>
             <p className="text-xs text-muted-foreground">Составляет расписание и управляет задачами</p>
           </div>
-          <button
-            onClick={() => setShowKeySettings(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-xl hover:bg-white/5 transition-colors"
-            title="Сменить API ключ"
-          >
-            <Settings size={15} className="text-muted-foreground" />
-          </button>
+          <Link href="/profile" className="flex h-8 w-8 items-center justify-center rounded-xl hover:bg-white/5 transition-colors" title="Профиль">
+            <Key size={15} className="text-muted-foreground" />
+          </Link>
         </div>
       </div>
 
