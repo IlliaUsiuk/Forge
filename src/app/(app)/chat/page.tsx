@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { Send, Loader2, Bot, User, CheckCircle2, Lock } from 'lucide-react'
+import { Send, Loader2, Bot, User, CheckCircle2, Key, ExternalLink, Settings, X } from 'lucide-react'
+import { playError, playClick } from '@/lib/sounds'
 import { useStore } from '@/lib/store'
 import type { Track, DayJob } from '@/lib/types'
 
@@ -54,23 +55,18 @@ type Action =
   | { type: 'skipTask'; taskId: string }
   | { type: 'resetData' }
 
-const SESSION_KEY = 'journal-unlocked'
-const JOURNAL_PASSWORD = '1212'
-
-function LockScreen({ onUnlock }: { onUnlock: () => void }) {
+function ApiKeySetup({ onSave }: { onSave: (key: string) => void }) {
   const [input, setInput] = useState('')
-  const [error, setError] = useState(false)
+  const [error, setError] = useState('')
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
-    if (input === JOURNAL_PASSWORD) {
-      sessionStorage.setItem(SESSION_KEY, '1')
-      onUnlock()
-    } else {
-      setError(true)
-      setInput('')
-      setTimeout(() => setError(false), 1500)
+    const key = input.trim()
+    if (!key.startsWith('sk-ant-')) {
+      setError('Ключ должен начинаться с sk-ant-...')
+      return
     }
+    onSave(key)
   }
 
   return (
@@ -79,58 +75,177 @@ function LockScreen({ onUnlock }: { onUnlock: () => void }) {
         className="flex h-14 w-14 items-center justify-center rounded-2xl"
         style={{ background: 'linear-gradient(135deg, rgba(129,140,248,0.2), rgba(167,139,250,0.1))', boxShadow: '0 0 0 1px rgba(129,140,248,0.2) inset' }}
       >
-        <Lock size={22} style={{ color: '#818cf8' }} />
+        <Key size={22} style={{ color: '#818cf8' }} />
       </div>
       <div className="text-center">
-        <h2 className="text-xl font-bold text-white">Психолог заперт</h2>
-        <p className="text-sm text-white/40 mt-1">Введи пароль чтобы войти</p>
+        <h2 className="text-xl font-bold text-foreground">Добавь API ключ</h2>
+        <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+          Помощник работает через Anthropic API. Добавь свой ключ — он хранится только на твоём устройстве.
+        </p>
       </div>
-      <form onSubmit={handleSubmit} className="flex flex-col items-center gap-3 w-full max-w-xs">
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3 w-full max-w-sm">
         <input
           type="password"
           value={input}
-          onChange={e => setInput(e.target.value)}
-          autoComplete="new-password"
-          placeholder="Пароль"
-          className="w-full rounded-xl px-4 py-3 text-center text-lg font-bold tracking-widest outline-none transition-all"
+          onChange={e => { setInput(e.target.value); setError('') }}
+          placeholder="sk-ant-api03-..."
+          autoComplete="off"
+          className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
           style={{
-            background: error ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)',
+            background: error ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.05)',
             border: `1px solid ${error ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)'}`,
-            color: error ? '#ef4444' : 'white',
+            color: 'white',
           }}
         />
-        {error && <p className="text-xs text-red-400">Неверный пароль</p>}
+        {error && <p className="text-xs text-red-400 -mt-1">{error}</p>}
         <button
           type="submit"
-          className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-all"
+          className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}
         >
-          Войти
+          Сохранить и открыть чат
         </button>
       </form>
+
+      <div className="flex flex-col gap-2 w-full max-w-sm">
+        <p className="text-xs text-muted-foreground text-center mb-1">Где взять ключ?</p>
+        <div
+          className="flex items-center gap-3 rounded-xl p-3 text-sm"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <span className="text-base">1️⃣</span>
+          <span className="text-muted-foreground">Зайди на <span className="text-primary">console.anthropic.com</span></span>
+          <ExternalLink size={13} className="ml-auto shrink-0 text-muted-foreground" />
+        </div>
+        <div
+          className="flex items-center gap-3 rounded-xl p-3 text-sm"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <span className="text-base">2️⃣</span>
+          <span className="text-muted-foreground">API Keys → Create Key</span>
+        </div>
+        <div
+          className="flex items-center gap-3 rounded-xl p-3 text-sm"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <span className="text-base">3️⃣</span>
+          <span className="text-muted-foreground">Скопируй и вставь сюда</span>
+        </div>
+        <p className="text-xs text-muted-foreground text-center mt-1">
+          🔒 Ключ сохраняется локально и никуда не передаётся
+        </p>
+      </div>
     </div>
   )
 }
 
 export default function ChatPage() {
-  const [unlocked, setUnlocked] = useState(false)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [lastActions, setLastActions] = useState<string[]>([])
+  const [showKeySettings, setShowKeySettings] = useState(false)
+  const [unlocked, setUnlocked] = useState(false)
+  const [lockInput, setLockInput] = useState('')
+  const [lockError, setLockError] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (sessionStorage.getItem(SESSION_KEY) === '1') setUnlocked(true)
-  }, [])
-
-  const { chatHistory, addChatMessage, tasks, streak, trackXP, workDays, dayJobs, journalEntries, journalProfiles,
+  const { chatHistory, addChatMessage, tasks, streak, trackXP, workDays, dayJobs,
+    journalEntries, journalProfiles, userName, apiKey, setApiKey, password, setPassword,
+    templateTasks, categories,
     updateSchedule, setDayJobs, addTask, completeTask, uncompleteTask, skipTask, setOnboardingDone } = useStore()
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatHistory, loading])
 
-  if (!unlocked) return <LockScreen onUnlock={() => setUnlocked(true)} />
+  const isSettingUp = !password
+
+  if (!mounted) return null
+
+  if (!unlocked) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-6 p-8">
+        <div
+          className="flex h-14 w-14 items-center justify-center rounded-2xl"
+          style={{ background: 'linear-gradient(135deg, rgba(129,140,248,0.2), rgba(167,139,250,0.1))', boxShadow: '0 0 0 1px rgba(129,140,248,0.2) inset' }}
+        >
+          <Key size={22} style={{ color: '#818cf8' }} />
+        </div>
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-white">{isSettingUp ? 'Защити помощника' : 'Помощник заперт'}</h2>
+          <p className="text-sm text-white/40 mt-1">{isSettingUp ? 'Придумай пароль для входа' : 'Введи пароль чтобы войти'}</p>
+        </div>
+        <form
+          onSubmit={e => {
+            e.preventDefault()
+            if (isSettingUp) {
+              if (lockInput.length < 2) return
+              setPassword(lockInput)
+              setUnlocked(true)
+              return
+            }
+            if (lockInput === password) {
+              playClick()
+              setUnlocked(true)
+            } else {
+              playError()
+              setLockError(true)
+              setLockInput('')
+              setTimeout(() => setLockError(false), 1500)
+            }
+          }}
+          className="flex flex-col items-center gap-3 w-full max-w-xs"
+        >
+          <input
+            type="password"
+            value={lockInput}
+            onChange={e => { setLockInput(e.target.value); setLockError(false) }}
+            autoFocus
+            placeholder={isSettingUp ? 'Придумай пароль' : 'Пароль'}
+            className="w-full rounded-xl px-4 py-3 text-center text-lg font-bold tracking-widest outline-none transition-all"
+            style={{
+              background: lockError ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${lockError ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)'}`,
+              color: lockError ? '#ef4444' : 'white',
+            }}
+          />
+          {lockError && <p className="text-xs text-red-400">Неверный пароль</p>}
+          {isSettingUp && lockInput.length > 0 && lockInput.length < 2 && (
+            <p className="text-xs text-white/30">Минимум 2 символа</p>
+          )}
+          <button
+            type="submit"
+            disabled={isSettingUp && lockInput.length < 2}
+            className="w-full rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+            style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}
+          >
+            {isSettingUp ? 'Установить пароль' : 'Войти'}
+          </button>
+        </form>
+      </div>
+    )
+  }
+
+  if (!apiKey && !showKeySettings) {
+    return <ApiKeySetup onSave={(key) => { setApiKey(key) }} />
+  }
+
+  if (showKeySettings) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-6 p-8">
+        <button
+          onClick={() => setShowKeySettings(false)}
+          className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full hover:bg-white/5 transition-colors"
+        >
+          <X size={16} className="text-muted-foreground" />
+        </button>
+        <ApiKeySetup onSave={(key) => { setApiKey(key); setShowKeySettings(false) }} />
+      </div>
+    )
+  }
 
   const executeActions = (actions: Action[]) => {
     const done: string[] = []
@@ -176,12 +291,14 @@ export default function ChatPage() {
     const upcomingTasks = tasks
       .filter(t => t.date >= today && !t.completed)
       .sort((a, b) => a.date.localeCompare(b.date))
-
     const recentJournal = [...journalEntries]
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 7)
-
-    return { today, dayOfWeek, todayTasks, upcomingTasks, streak, trackXP, workDaysCount: workDays.length, dayJobs: dayJobs.slice(0, 14), recentJournal, journalProfiles }
+    const poolCards = templateTasks.map(t => {
+      const cat = categories.find(c => c.id === t.categoryId)
+      return { id: t.id, title: t.title, track: t.categoryId, categoryLabel: cat?.label ?? t.categoryId, xp: t.xp, durationMins: t.durationMins, weeklyFrequency: t.weeklyFrequency ?? null, defaultTimeStart: t.defaultTimeStart ?? null }
+    })
+    return { userName, today, dayOfWeek, todayTasks, upcomingTasks, streak, trackXP, workDaysCount: workDays.length, dayJobs: dayJobs.slice(0, 14), recentJournal, journalProfiles, poolCards }
   }
 
   const send = async () => {
@@ -202,7 +319,7 @@ export default function ChatPage() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, context: buildContext() }),
+        body: JSON.stringify({ messages, context: buildContext(), apiKey }),
       })
 
       const data = await res.json()
@@ -213,12 +330,8 @@ export default function ChatPage() {
         return
       }
 
-      if (data.message) {
-        addChatMessage({ role: 'assistant', content: data.message })
-      }
-      if (data.actions?.length > 0) {
-        executeActions(data.actions)
-      }
+      if (data.message) addChatMessage({ role: 'assistant', content: data.message })
+      if (data.actions?.length > 0) executeActions(data.actions)
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Неизвестная ошибка'
       addChatMessage({ role: 'assistant', content: `❌ Ошибка сети: ${errorMsg}` })
@@ -242,10 +355,17 @@ export default function ChatPage() {
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15">
             <Bot size={16} className="text-primary" />
           </div>
-          <div>
-            <h1 className="text-sm font-semibold text-foreground">Психолог</h1>
-            <p className="text-xs text-muted-foreground">Управляет расписанием и заданиями</p>
+          <div className="flex-1">
+            <h1 className="text-sm font-semibold text-foreground">Помощник</h1>
+            <p className="text-xs text-muted-foreground">Составляет расписание и управляет задачами</p>
           </div>
+          <button
+            onClick={() => setShowKeySettings(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-xl hover:bg-white/5 transition-colors"
+            title="Сменить API ключ"
+          >
+            <Settings size={15} className="text-muted-foreground" />
+          </button>
         </div>
       </div>
 
@@ -255,17 +375,17 @@ export default function ChatPage() {
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
             <div className="text-4xl">🤖</div>
             <div>
-              <p className="font-medium text-foreground">Привет, Илья!</p>
+              <p className="font-medium text-foreground">Привет, {userName}!</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Я могу настроить расписание, добавить задачи и отметить выполненное.<br />
+                Составлю расписание, добавлю задачи, отмечу выполненное.<br />
                 Просто напиши — и я всё сделаю сам.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-2 w-full max-w-sm">
               {[
-                'Настрой расписание на март: работаю пн-пт',
+                'Составь расписание на апрель',
                 'Какие задачи на сегодня?',
-                'Мотивируй меня!',
+                'Что мне сделать на этой неделе?',
               ].map(s => (
                 <button
                   key={s}
@@ -314,7 +434,6 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* Action notifications */}
         {lastActions.length > 0 && (
           <div className="flex flex-col gap-1">
             {lastActions.map((a, i) => (

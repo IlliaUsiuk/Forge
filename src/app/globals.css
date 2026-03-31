@@ -63,6 +63,10 @@
   --sidebar-ring: #a78bfa;
 }
 
+html {
+  font-size: 17px !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -99,6 +103,16 @@
 @keyframes xp-pop {
   0% { opacity: 1; transform: translateY(0) scale(1); }
   100% { opacity: 0; transform: translateY(-40px) scale(1.2); }
+}
+
+@keyframes ach-slide-in {
+  0%   { opacity: 0; transform: translateX(-32px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes ach-fade-out {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 @keyframes pulse-glow {

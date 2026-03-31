@@ -1,47 +1,109 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import { format } from 'date-fns'
-
-// Check for new achievements
-function checkAchievements(state: AppState, newAchievements: string[]): string[] {
-  const achievements = [...newAchievements]
-
-  // Streak milestones
-  if (state.streak.current === 7 && !achievements.includes('streak-7')) achievements.push('streak-7')
-  if (state.streak.current === 30 && !achievements.includes('streak-30')) achievements.push('streak-30')
-  if (state.streak.current === 100 && !achievements.includes('streak-100')) achievements.push('streak-100')
-  if (state.streak.longest === 365 && !achievements.includes('streak-365')) achievements.push('streak-365')
-
-  // Track milestones
-  Object.entries(state.trackXP).forEach(([track, xp]) => {
-    if (xp >= 100 && !achievements.includes(`${track}-100`)) achievements.push(`${track}-100`)
-    if (xp >= 1000 && !achievements.includes(`${track}-1000`)) achievements.push(`${track}-1000`)
-  })
-
-  // Total XP milestones
-  const totalXP = Object.values(state.trackXP).reduce((a, b) => a + b, 0)
-  if (totalXP >= 500 && !achievements.includes('total-500')) achievements.push('total-500')
-  if (totalXP >= 5000 && !achievements.includes('total-5000')) achievements.push('total-5000')
-  if (totalXP >= 10000 && !achievements.includes('total-10000')) achievements.push('total-10000')
-
-  // Task completion milestones
-  const completedCount = state.tasks.filter(t => t.completed).length
-  if (completedCount >= 1 && !achievements.includes('first-task')) achievements.push('first-task')
-  if (completedCount >= 100 && !achievements.includes('tasks-100')) achievements.push('tasks-100')
-  if (completedCount >= 500 && !achievements.includes('tasks-500')) achievements.push('tasks-500')
-
-  // All tracks milestone
-  const tracksWithXP = Object.values(state.trackXP).filter(xp => xp > 0).length
-  if (tracksWithXP === 7 && !achievements.includes('all-tracks')) achievements.push('all-tracks')
-
-  return achievements
-}
-import type { Task, Track, AppState, StreakState, DayJob, JournalEntry, Vacancy, CVTemplate, Purchase } from './types'
-import { TRACK_XP, calcXP } from './types'
+import type { Task, Track, AppState, StreakState, DayJob, JournalEntry, Category, TemplateTask } from './types'
+import { calcXP, DEFAULT_SCHEDULE_SETTINGS } from './types'
 import { generateRecurringTasks } from './schedule'
 import { processStreakOnOpen } from './streak'
+import { useNotificationStore } from './notifications'
 
-type ChatMessage = { role: 'user' | 'assistant'; content: string }
+function applyAchievementRules(state: AppState, add: (id: string) => void) {
+  const done = state.tasks.filter(t => t.completed).length
+  if (done >= 1)    add('first-task')
+  if (done >= 5)    add('tasks-5')
+  if (done >= 10)   add('tasks-10')
+  if (done >= 20)   add('tasks-20')
+  if (done >= 30)   add('tasks-30')
+  if (done >= 50)   add('tasks-50')
+  if (done >= 75)   add('tasks-75')
+  if (done >= 100)  add('tasks-100')
+  if (done >= 150)  add('tasks-150')
+  if (done >= 250)  add('tasks-250')
+  if (done >= 500)  add('tasks-500')
+  if (done >= 1000) add('tasks-1000')
+
+  const sc = state.streak.current
+  if (sc >= 3)   add('streak-3')
+  if (sc >= 7)   add('streak-7')
+  if (sc >= 14)  add('streak-14')
+  if (sc >= 21)  add('streak-21')
+  if (sc >= 30)  add('streak-30')
+  if (sc >= 60)  add('streak-60')
+  if (sc >= 100) add('streak-100')
+  if (sc >= 200) add('streak-200')
+  if (sc >= 365) add('streak-365')
+
+  const sl = state.streak.longest
+  if (sl >= 7)   add('longest-7')
+  if (sl >= 30)  add('longest-30')
+  if (sl >= 100) add('longest-100')
+
+  const totalXP = Object.values(state.trackXP).reduce((s, v) => s + v, 0)
+  if (totalXP >= 100)   add('total-100')
+  if (totalXP >= 250)   add('total-250')
+  if (totalXP >= 500)   add('total-500')
+  if (totalXP >= 1000)  add('total-1000')
+  if (totalXP >= 2000)  add('total-2000')
+  if (totalXP >= 5000)  add('total-5000')
+  if (totalXP >= 10000) add('total-10000')
+  if (totalXP >= 20000) add('total-20000')
+  if (totalXP >= 50000) add('total-50000')
+
+  const getXP = (key: string) => Object.entries(state.trackXP).find(([k]) => k.includes(key))?.[1] ?? 0
+  if (getXP('sport') >= 100)  add('xp-sport-100')
+  if (getXP('sport') >= 500)  add('xp-sport-500')
+  if (getXP('study') >= 100)  add('xp-study-100')
+  if (getXP('study') >= 500)  add('xp-study-500')
+  if (getXP('financ') >= 200) add('xp-finance-200')
+  const tracksOver1000 = Object.values(state.trackXP).filter(v => v >= 1000).length
+  if (tracksOver1000 >= 3) add('xp-all-1000')
+  const tracksWithXP = Object.values(state.trackXP).filter(v => v > 0).length
+  if (tracksWithXP >= 5) add('all-tracks')
+
+  const jc = state.journalEntries.length
+  if (jc >= 1)   add('journal-1')
+  if (jc >= 5)   add('journal-5')
+  if (jc >= 10)  add('journal-10')
+  if (jc >= 25)  add('journal-25')
+  if (jc >= 50)  add('journal-50')
+  if (jc >= 100) add('journal-100')
+  if (Object.keys(state.journalProfiles).length >= 1) add('journal-profile')
+
+  if (state.templateTasks.length >= 1)  add('pool-first')
+  if (state.templateTasks.length >= 3)  add('pool-3')
+  if (state.templateTasks.length >= 5)  add('pool-5')
+  if (state.templateTasks.length >= 10) add('pool-10')
+  if (state.templateTasks.length >= 20) add('pool-20')
+  if (state.templateTasks.length >= 50) add('pool-50')
+  if (state.categories.length >= 1) add('category-first')
+  if (state.categories.length >= 3) add('categories-3')
+  if (state.categories.length >= 5) add('categories-5')
+  if (state.categories.length >= 8) add('categories-8')
+
+  if (state.dayJobs.length >= 1)     add('schedule-setup')
+  if (state.chatHistory.length >= 1)  add('chat-first')
+  if (state.chatHistory.length >= 10) add('chat-10')
+}
+
+// Pure computation — no side effects. Returns merged achievement list.
+export function computeAchievements(state: AppState, existing: string[]): string[] {
+  const a = [...existing]
+  const add = (id: string) => { if (!a.includes(id)) a.push(id) }
+  applyAchievementRules(state, add)
+  return a
+}
+
+// Interactive version — shows toasts for newly unlocked achievements.
+function checkAchievements(state: AppState, newAchievements: string[]): string[] {
+  const a = [...newAchievements]
+  const add = (id: string) => {
+    if (!a.includes(id)) {
+      a.push(id)
+      useNotificationStore.getState().showAchievement(id)
+    }
+  }
+  applyAchievementRules(state, add)
+  return a
+}
 
 const initialStreak: StreakState = {
   current: 0,
@@ -50,53 +112,55 @@ const initialStreak: StreakState = {
   freezeUsedMonth: null,
 }
 
-const initialTrackXP: Record<Track, number> = {
-  ai: 0, design: 0, selfdevelopment: 0,
-  mediabuy: 0, english: 0, polish: 0, gym: 0,
-}
-
 type Store = AppState & {
+  setUserName: (name: string) => void
+  setPassword: (password: string) => void
+  setAvatarUrl: (url: string) => void
+  setApiKey: (key: string) => void
+  setScheduleSettings: (s: Partial<import('./types').ScheduleSettings>) => void
+  addCategory: (cat: Omit<Category, 'id'>) => void
+  updateCategory: (id: string, changes: Partial<Omit<Category, 'id'>>) => void
+  deleteCategory: (id: string) => void
+  addTemplateTask: (t: Omit<TemplateTask, 'id'>) => void
+  updateTemplateTask: (id: string, changes: Partial<Omit<TemplateTask, 'id'>>) => void
+  deleteTemplateTask: (id: string) => void
   completeTask: (taskId: string) => void
   uncompleteTask: (taskId: string) => void
   skipTask: (taskId: string) => void
   deleteTask: (taskId: string) => void
   updateTaskTime: (taskId: string, timeStart: string | undefined) => void
-  updateTaskDuration: (taskId: string, duration: number | undefined) => void
+  updateTaskDuration: (taskId: string, durationMins: number | undefined) => void
   updateTaskTitle: (taskId: string, title: string) => void
-  updateTaskRecurringType: (taskId: string, recurringType: string | undefined) => void
   reorderTask: (taskId: string, direction: 'up' | 'down') => void
   moveTaskTo: (taskId: string, targetTaskId: string) => void
   addTask: (task: Omit<Task, 'id' | 'completed' | 'skipped'>) => void
   updateSchedule: (month: string, workDays: string[]) => void
   setDayJobs: (jobs: DayJob[]) => void
   deleteRecurringSeries: (track: Track) => void
-  addChatMessage: (msg: ChatMessage) => void
-  clearChatHistory: () => void
   setOnboardingDone: () => void
   processOnOpen: () => void
   clearOldTasks: (beforeDate: string) => void
   saveJournalEntry: (date: string, text: string) => void
   deleteJournalEntry: (id: string) => void
   setJournalProfile: (month: string, text: string) => void
-  addVacancy: (v: Omit<Vacancy, 'id' | 'createdAt'>) => void
-  updateVacancy: (id: string, changes: Partial<Vacancy>) => void
-  deleteVacancy: (id: string) => void
-  addCVTemplate: (t: Omit<CVTemplate, 'id' | 'createdAt'>) => void
-  updateCVTemplate: (id: string, changes: Partial<CVTemplate>) => void
-  deleteCVTemplate: (id: string) => void
-  buyItem: (item: { id: string; title: string; price: number }) => boolean
-  useItem: (purchaseId: string) => void
-  sellItem: (purchaseId: string) => void
+  deleteJournalProfile: (month: string) => void
+  addChatMessage: (msg: { role: 'user' | 'assistant'; content: string }) => void
+  clearChatHistory: () => void
 }
 
-export const useStore = create<Store>()(
-  persist(
-    (set, get) => ({
+const STORED_PASSWORD_KEY = 'forge-lock-password'
+const STORED_API_KEY = 'forge-api-key'
+
+export const useStore = create<Store>()((set, get) => ({
+      userName: '',
+      password: typeof window !== 'undefined' ? (localStorage.getItem(STORED_PASSWORD_KEY) ?? '') : '',
+      avatarUrl: '',
+      apiKey: typeof window !== 'undefined' ? (localStorage.getItem(STORED_API_KEY) ?? '') : '',
       tasks: [],
       workDays: [],
       dayJobs: [],
       streak: initialStreak,
-      trackXP: { ...initialTrackXP },
+      trackXP: {},
       onboardingDone: false,
       chatHistory: [],
       dailyXP: {},
@@ -106,6 +170,56 @@ export const useStore = create<Store>()(
       vacancies: [],
       cvTemplates: [],
       purchases: [],
+      routineChecks: {},
+      categories: [],
+      templateTasks: [],
+      scheduleSettings: DEFAULT_SCHEDULE_SETTINGS,
+
+      setUserName: (name) => set({ userName: name.trim() || 'Пользователь' }),
+      setPassword: (password) => {
+        if (typeof window !== 'undefined') {
+          if (password) localStorage.setItem(STORED_PASSWORD_KEY, password)
+          else localStorage.removeItem(STORED_PASSWORD_KEY)
+        }
+        set({ password })
+      },
+      setAvatarUrl: (url) => set({ avatarUrl: url }),
+      setApiKey: (key) => {
+        const trimmed = key.trim()
+        if (typeof window !== 'undefined') {
+          if (trimmed) localStorage.setItem(STORED_API_KEY, trimmed)
+          else localStorage.removeItem(STORED_API_KEY)
+        }
+        set({ apiKey: trimmed })
+      },
+      setScheduleSettings: (s) => set(state => ({ scheduleSettings: { ...state.scheduleSettings, ...s } })),
+
+      addCategory: (cat) => {
+        const id = cat.label.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now()
+        set(s => {
+          const next = [...s.categories, { ...cat, id }]
+          return { categories: next, achievements: checkAchievements({ ...s, categories: next }, s.achievements) }
+        })
+      },
+      updateCategory: (id, changes) => {
+        set(s => ({ categories: s.categories.map(c => c.id === id ? { ...c, ...changes } : c) }))
+      },
+      deleteCategory: (id) => {
+        set(s => ({ categories: s.categories.filter(c => c.id !== id), templateTasks: s.templateTasks.filter(t => t.categoryId !== id) }))
+      },
+      addTemplateTask: (t) => {
+        const id = `tmpl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+        set(s => {
+          const next = [...s.templateTasks, { ...t, id }]
+          return { templateTasks: next, achievements: checkAchievements({ ...s, templateTasks: next }, s.achievements) }
+        })
+      },
+      updateTemplateTask: (id, changes) => {
+        set(s => ({ templateTasks: s.templateTasks.map(t => t.id === id ? { ...t, ...changes } : t) }))
+      },
+      deleteTemplateTask: (id) => {
+        set(s => ({ templateTasks: s.templateTasks.filter(t => t.id !== id) }))
+      },
 
       completeTask: (taskId) => {
         const state = get()
@@ -113,30 +227,19 @@ export const useStore = create<Store>()(
         if (!task || task.completed || task.skipped) return
         const today = format(new Date(), 'yyyy-MM-dd')
         set(s => {
-          const updatedTasks = s.tasks.map(t =>
-            t.id === taskId ? { ...t, completed: true } : t
-          )
+          const updatedTasks = s.tasks.map(t => t.id === taskId ? { ...t, completed: true } : t)
           const newTrackXP = { ...s.trackXP }
-          // Use task.xp directly (handles dynamic XP for polish)
           newTrackXP[task.track] = (newTrackXP[task.track] || 0) + task.xp
           let newStreak = { ...s.streak }
           if (task.date === today) {
-            const hadCompletedBefore = s.tasks.some(
-              t => t.id !== taskId && t.date === today && t.completed && !t.skipped
-            )
+            const hadCompletedBefore = s.tasks.some(t => t.id !== taskId && t.date === today && t.completed && !t.skipped)
             if (!hadCompletedBefore) {
               const yesterday = format(new Date(Date.now() - 86400000), 'yyyy-MM-dd')
-              if (
-                newStreak.lastActiveDate === yesterday ||
-                newStreak.lastActiveDate === today ||
-                newStreak.lastActiveDate === ''
-              ) {
+              if (newStreak.lastActiveDate === yesterday || newStreak.lastActiveDate === today || newStreak.lastActiveDate === '') {
                 if (newStreak.lastActiveDate !== today) {
                   newStreak.current += 1
                   newStreak.lastActiveDate = today
-                  if (newStreak.current > newStreak.longest) {
-                    newStreak.longest = newStreak.current
-                  }
+                  if (newStreak.current > newStreak.longest) newStreak.longest = newStreak.current
                 }
               }
             }
@@ -147,16 +250,9 @@ export const useStore = create<Store>()(
             streak: newStreak,
             dailyXP: {
               ...s.dailyXP,
-              [today]: {
-                ...(s.dailyXP[today] || {}),
-                [task.track]: ((s.dailyXP[today]?.[task.track] || 0) + task.xp),
-              },
+              [today]: { ...(s.dailyXP[today] || {}), [task.track]: ((s.dailyXP[today]?.[task.track] || 0) + task.xp) },
             },
-            achievements: checkAchievements({
-              ...s,
-              trackXP: newTrackXP,
-              streak: newStreak,
-            }, s.achievements),
+            achievements: checkAchievements({ ...s, trackXP: newTrackXP, streak: newStreak }, s.achievements),
           }
         })
       },
@@ -167,21 +263,15 @@ export const useStore = create<Store>()(
         if (!task || !task.completed) return
         const today = format(new Date(), 'yyyy-MM-dd')
         set(s => {
-          const updatedTasks = s.tasks.map(t =>
-            t.id === taskId ? { ...t, completed: false } : t
-          )
+          const updatedTasks = s.tasks.map(t => t.id === taskId ? { ...t, completed: false } : t)
           const newTrackXP = { ...s.trackXP }
-          // Use task.xp directly (handles dynamic XP for polish)
           newTrackXP[task.track] = Math.max(0, (newTrackXP[task.track] || 0) - task.xp)
           return {
             tasks: updatedTasks,
             trackXP: newTrackXP,
             dailyXP: task.date === today ? {
               ...s.dailyXP,
-              [today]: {
-                ...(s.dailyXP[today] || {}),
-                [task.track]: Math.max(0, (s.dailyXP[today]?.[task.track] || 0) - task.xp),
-              },
+              [today]: { ...(s.dailyXP[today] || {}), [task.track]: Math.max(0, (s.dailyXP[today]?.[task.track] || 0) - task.xp) },
             } : s.dailyXP,
           }
         })
@@ -195,21 +285,18 @@ export const useStore = create<Store>()(
         set(s => ({ tasks: s.tasks.filter(t => t.id !== taskId) }))
       },
 
-      updateTaskDuration: (taskId, duration) => {
+      updateTaskDuration: (taskId, durationMins) => {
         set(s => ({
           tasks: s.tasks.map(t => {
             if (t.id !== taskId) return t
-            const newDuration = duration ?? t.durationMins
+            const newDuration = durationMins ?? t.durationMins
             const xp = newDuration ? calcXP(t.difficulty ?? 1.0, newDuration) : t.xp
-            return { ...t, duration, xp }
+            return { ...t, durationMins, xp }
           })
         }))
       },
       updateTaskTitle: (taskId, title) => {
         set(s => ({ tasks: s.tasks.map(t => t.id === taskId ? { ...t, title } : t) }))
-      },
-      updateTaskRecurringType: (taskId, recurringType) => {
-        set(s => ({ tasks: s.tasks.map(t => t.id === taskId ? { ...t, recurringType } : t) }))
       },
       updateTaskTime: (taskId, timeStart) => {
         set(s => ({ tasks: s.tasks.map(t => t.id === taskId ? { ...t, timeStart } : t) }))
@@ -219,17 +306,10 @@ export const useStore = create<Store>()(
         set(s => {
           const task = s.tasks.find(t => t.id === taskId)
           if (!task) return s
-          // Get all tasks for the same day, sorted by current order
-          const TRACK_ORDER: Record<string, number> = {
-            english: 1, polish: 2, selfdevelopment: 3, ai: 4, design: 5, mediabuy: 6, gym: 7,
-          }
-          const dayTasks = s.tasks
-            .filter(t => t.date === task.date)
-            .sort((a, b) => (a.sortOrder ?? TRACK_ORDER[a.track] ?? 99) - (b.sortOrder ?? TRACK_ORDER[b.track] ?? 99))
+          const dayTasks = s.tasks.filter(t => t.date === task.date).sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99))
           const idx = dayTasks.findIndex(t => t.id === taskId)
           const swapIdx = direction === 'up' ? idx - 1 : idx + 1
           if (swapIdx < 0 || swapIdx >= dayTasks.length) return s
-          // Assign sequential sortOrder to all day tasks, then swap
           const ordered = dayTasks.map((t, i) => ({ ...t, sortOrder: i }))
           ordered[idx].sortOrder = swapIdx
           ordered[swapIdx].sortOrder = idx
@@ -242,10 +322,7 @@ export const useStore = create<Store>()(
         set(s => {
           const task = s.tasks.find(t => t.id === taskId)
           if (!task) return s
-          const TRACK_ORD: Record<string, number> = { english: 1, polish: 2, selfdevelopment: 3, ai: 4, design: 5, mediabuy: 6, gym: 7 }
-          const dayTasks = s.tasks
-            .filter(t => t.date === task.date)
-            .sort((a, b) => (a.sortOrder ?? TRACK_ORD[a.track] ?? 99) - (b.sortOrder ?? TRACK_ORD[b.track] ?? 99))
+          const dayTasks = s.tasks.filter(t => t.date === task.date).sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99))
           const fromIdx = dayTasks.findIndex(t => t.id === taskId)
           const toIdx = dayTasks.findIndex(t => t.id === targetTaskId)
           if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return s
@@ -269,18 +346,12 @@ export const useStore = create<Store>()(
 
       updateSchedule: (month, newWorkDays) => {
         set(s => {
-          // Keep non-recurring tasks AND already completed/skipped recurring tasks from this month
-          // so that execution history is not lost when schedule is regenerated
-          const keptTasks = s.tasks.filter(t =>
-            !(t.isRecurring && t.date.startsWith(month)) ||
-            t.completed || t.skipped
-          )
+          const keptTasks = s.tasks.filter(t => !(t.isRecurring && t.date.startsWith(month) && !t.completed && !t.skipped))
           const otherWorkDays = s.workDays.filter(d => !d.startsWith(month))
           const allWorkDays = [...otherWorkDays, ...newWorkDays]
           const macDays = new Set(s.dayJobs.map(j => j.date))
           const macDaysInMonth = [...macDays].filter(d => d.startsWith(month))
           const allDaysForGen = [...new Set([...newWorkDays, ...macDaysInMonth])]
-          // keptTasks includes completed recurring tasks — alreadyExists() will skip them
           const generated = generateRecurringTasks(allDaysForGen, keptTasks, macDays)
           return { workDays: allWorkDays, tasks: [...keptTasks, ...generated], onboardingDone: true }
         })
@@ -292,24 +363,17 @@ export const useStore = create<Store>()(
           const kept = s.dayJobs.filter(j => !dates.has(j.date))
           const newDayJobs = [...kept, ...jobs]
           const newMacDays = new Set(newDayJobs.map(j => j.date))
-
-          // Regenerate recurring tasks for affected months
           const affectedMonths = new Set([...dates].map(d => d.slice(0, 7)))
           let tasks = s.tasks
           for (const month of affectedMonths) {
             const monthWorkDays = s.workDays.filter(d => d.startsWith(month))
             if (monthWorkDays.length === 0) continue
-            // Keep completed/skipped recurring tasks — don't lose execution history
-            const keptTasks = tasks.filter(t =>
-              !(t.isRecurring && t.date.startsWith(month)) ||
-              t.completed || t.skipped
-            )
+            const keptTasks = tasks.filter(t => !(t.isRecurring && t.date.startsWith(month)) || t.completed || t.skipped)
             const macDaysInMonth = [...newMacDays].filter(d => d.startsWith(month))
             const allDaysForGen = [...new Set([...monthWorkDays, ...macDaysInMonth])]
             const generated = generateRecurringTasks(allDaysForGen, keptTasks, newMacDays)
             tasks = [...keptTasks, ...generated]
           }
-
           return { dayJobs: newDayJobs, tasks, onboardingDone: true }
         })
       },
@@ -318,11 +382,6 @@ export const useStore = create<Store>()(
         set(s => ({ tasks: s.tasks.filter(t => !(t.isRecurring && t.track === track)) }))
       },
 
-      addChatMessage: (msg) => {
-        set(s => ({ chatHistory: [...s.chatHistory, msg] }))
-      },
-
-      clearChatHistory: () => set({ chatHistory: [] }),
       setOnboardingDone: () => set({ onboardingDone: true }),
 
       clearOldTasks: (beforeDate) => {
@@ -340,7 +399,8 @@ export const useStore = create<Store>()(
             return { journalEntries: s.journalEntries.map(e => e.id === existing.id ? { ...e, text, updatedAt: new Date().toISOString() } : e) }
           }
           const entry: JournalEntry = { id: `journal-${date}`, date, text, updatedAt: new Date().toISOString() }
-          return { journalEntries: [...s.journalEntries, entry] }
+          const next = [...s.journalEntries, entry]
+          return { journalEntries: next, achievements: checkAchievements({ ...s, journalEntries: next }, s.achievements) }
         })
       },
       deleteJournalEntry: (id) => {
@@ -349,110 +409,33 @@ export const useStore = create<Store>()(
 
       setJournalProfile: (month, text) => {
         set(s => ({
-          journalProfiles: {
-            ...s.journalProfiles,
-            [month]: { text, updatedAt: new Date().toISOString() },
-          },
+          journalProfiles: { ...s.journalProfiles, [month]: { text, updatedAt: new Date().toISOString() } },
         }))
       },
-
-      addVacancy: (v) => {
-        const vacancy: Vacancy = { ...v, id: `vac-${Date.now()}`, createdAt: new Date().toISOString() }
-        set(s => ({ vacancies: [...s.vacancies, vacancy] }))
-      },
-      updateVacancy: (id, changes) => {
-        set(s => ({ vacancies: s.vacancies.map(v => v.id === id ? { ...v, ...changes } : v) }))
-      },
-      deleteVacancy: (id) => {
-        set(s => ({ vacancies: s.vacancies.filter(v => v.id !== id) }))
-      },
-      addCVTemplate: (t) => {
-        const cv: CVTemplate = { ...t, id: `cv-${Date.now()}`, createdAt: new Date().toISOString() }
-        set(s => ({ cvTemplates: [...s.cvTemplates, cv] }))
-      },
-      updateCVTemplate: (id, changes) => {
-        set(s => ({ cvTemplates: s.cvTemplates.map(c => c.id === id ? { ...c, ...changes } : c) }))
-      },
-      deleteCVTemplate: (id) => {
-        set(s => ({ cvTemplates: s.cvTemplates.filter(c => c.id !== id) }))
+      deleteJournalProfile: (month) => {
+        set(s => {
+          const updated = { ...s.journalProfiles }
+          delete updated[month]
+          return { journalProfiles: updated }
+        })
       },
 
-      buyItem: (item) => {
-        const state = get()
-        const totalXP = Object.values(state.trackXP).reduce((a, b) => a + b, 0)
-        const spentXP = state.purchases.reduce((s, p) => s + p.price, 0)
-        if (totalXP - spentXP < item.price) return false
-        const purchase: Purchase = {
-          id: `purchase-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          itemId: item.id,
-          itemTitle: item.title,
-          price: item.price,
-          purchasedAt: new Date().toISOString(),
-        }
-        set(s => ({ purchases: [...s.purchases, purchase] }))
-        return true
+      addChatMessage: (msg) => {
+        set(s => {
+          const next = [...s.chatHistory, msg]
+          return { chatHistory: next, achievements: checkAchievements({ ...s, chatHistory: next }, s.achievements) }
+        })
       },
-
-      useItem: (purchaseId) => {
-        set(s => ({
-          purchases: s.purchases.map(p =>
-            p.id === purchaseId ? { ...p, usedAt: new Date().toISOString() } : p
-          ),
-        }))
-      },
-
-      sellItem: (purchaseId) => {
-        set(s => ({ purchases: s.purchases.filter(p => p.id !== purchaseId) }))
-      },
+      clearChatHistory: () => set({ chatHistory: [] }),
 
       processOnOpen: () => {
         const state = get()
         const today = format(new Date(), 'yyyy-MM-dd')
         if (!state.streak.lastActiveDate) return
         const newStreak = processStreakOnOpen(state.streak, state.tasks, today)
-        if (
-          newStreak.current !== state.streak.current ||
-          newStreak.longest !== state.streak.longest ||
-          newStreak.freezeUsedMonth !== state.streak.freezeUsedMonth
-        ) {
+        if (newStreak.current !== state.streak.current || newStreak.longest !== state.streak.longest || newStreak.freezeUsedMonth !== state.streak.freezeUsedMonth) {
           set({ streak: newStreak })
         }
       },
     }),
-    {
-      name: 'personal-dashboard-storage',
-      version: 3,
-      migrate: (persisted: unknown, fromVersion: number) => {
-        let state = persisted as AppState & { purchases?: Purchase[] }
-        if (fromVersion < 2) {
-          // Migrate to new XP formula: difficulty × durationMins × 25/120
-          const XP_MAP: Record<string, { difficulty: number; durationMins: number }> = {
-            'ai-daily':              { difficulty: 1.1, durationMins: 120 },
-            'design-daily':          { difficulty: 1.1, durationMins: 90  },
-            'mediabuy-daily':        { difficulty: 1.1, durationMins: 60  },
-            'english-homework':      { difficulty: 1.0, durationMins: 45  },
-            'english-tutor':         { difficulty: 1.0, durationMins: 60  },
-            'selfdevelopment-daily': { difficulty: 1.0, durationMins: 60  },
-            'polish-long':           { difficulty: 1.0, durationMins: 60  },
-            'polish-short':          { difficulty: 1.0, durationMins: 30  },
-            'gym-daily':             { difficulty: 0.5, durationMins: 90  },
-          }
-          const migratedTasks = state.tasks.map(t => {
-            if (t.completed) return t  // don't touch earned XP
-            const key = `${t.track}-${t.recurringType ?? 'daily'}`
-            const cfg = XP_MAP[key]
-            if (!cfg) return t
-            const dur = t.duration ?? cfg.durationMins
-            const xp = Math.round(cfg.difficulty * dur * 25 / 120)
-            return { ...t, xp, difficulty: cfg.difficulty, durationMins: cfg.durationMins }
-          })
-          state = { ...state, tasks: migratedTasks }
-        }
-        if (fromVersion < 3) {
-          if (!state.purchases) state = { ...state, purchases: [] }
-        }
-        return state
-      },
-    }
-  )
 )

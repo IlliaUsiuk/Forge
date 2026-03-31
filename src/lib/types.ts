@@ -1,4 +1,23 @@
-export type Track = 'ai' | 'design' | 'selfdevelopment' | 'mediabuy' | 'english' | 'polish' | 'gym'
+// Track is now a free string — no longer a closed union
+export type Track = string
+
+export type Category = {
+  id: string      // used as task.track value
+  label: string
+  color: string   // hex
+  emoji: string
+  mottos?: string[] // motivating messages shown in task cards
+}
+
+export type TemplateTask = {
+  id: string
+  title: string
+  categoryId: string
+  durationMins: number
+  xp: number
+  weeklyFrequency?: number   // 1–7 days per week
+  defaultTimeStart?: string  // "HH:MM"
+}
 
 export type Task = {
   id: string
@@ -10,15 +29,14 @@ export type Task = {
   isRecurring: boolean
   recurringType?: string
   xp: number
-  difficulty?: number  // multiplier: 0.5=easy, 1.0=average, 1.5=hard
-  durationMins?: number // planned duration in minutes
-  timeStart?: string // user-set override, e.g. "14:00"
-  sortOrder?: number  // user-set position within the day
-  duration?: number   // user-set duration override in minutes (ai/design: 120/240/360)
+  difficulty?: number
+  durationMins?: number
+  timeStart?: string
+  sortOrder?: number
+  emoji?: string
 }
 
-// XP = round(difficulty × durationMins × 25 / 120)
-// difficulty=1.0 + 60min = ~13 XP (calibration target)
+// XP = round(difficulty × durationMins × 25 / 60)
 export function calcXP(difficulty: number, durationMins: number): number {
   return Math.round(difficulty * durationMins * 25 / 60)
 }
@@ -30,19 +48,18 @@ export type StreakState = {
   freezeUsedMonth: string | null
 }
 
-// Рабочие часы в маке для конкретной даты
 export type DayJob = {
-  date: string   // YYYY-MM-DD
-  start: string  // "10:00"
-  end: string    // "19:00"
+  date: string
+  start: string
+  end: string
   label?: string
 }
 
 export type JournalEntry = {
   id: string
-  date: string    // YYYY-MM-DD
+  date: string
   text: string
-  updatedAt: string  // ISO timestamp
+  updatedAt: string
 }
 
 export type VacancyStatus = 'saved' | 'applied' | 'replied' | 'interview' | 'offer' | 'rejected'
@@ -51,24 +68,24 @@ export type Vacancy = {
   id: string
   company: string
   position: string
-  sphere: string    // e.g. "Дизайн", "AI"
-  color: string     // hex color for sphere
+  sphere: string
+  color: string
   status: VacancyStatus
   url?: string
   salary?: string
-  cvId?: string     // ID of CVTemplate used
+  cvId?: string
   coverLetter?: string
-  appliedAt?: string  // YYYY-MM-DD
+  appliedAt?: string
   notes?: string
   feedback?: string
-  lessons?: string    // what could be improved / mistake made
-  createdAt: string   // ISO timestamp
+  lessons?: string
+  createdAt: string
 }
 
 export type CVTemplate = {
   id: string
-  title: string     // e.g. "CV Продакт-дизайнер v2"
-  content: string   // full CV / cover letter text
+  title: string
+  content: string
   createdAt: string
 }
 
@@ -77,29 +94,51 @@ export type Purchase = {
   itemId: string
   itemTitle: string
   price: number
-  purchasedAt: string  // ISO
-  usedAt?: string      // ISO, set when used
+  purchasedAt: string
+  usedAt?: string
+}
+
+export type ScheduleSettings = {
+  wakeTime: string          // "HH:MM", default "07:00"
+  commuteToWorkMin: number  // minutes to get to work, default 30
+  prepMin: number           // morning prep time in minutes, default 60
+  departBufMin: number      // buffer before departure, default 10
+}
+
+export const DEFAULT_SCHEDULE_SETTINGS: ScheduleSettings = {
+  wakeTime: '07:00',
+  commuteToWorkMin: 30,
+  prepMin: 60,
+  departBufMin: 10,
 }
 
 export type AppState = {
+  userName: string
+  password: string
+  avatarUrl: string
+  apiKey: string
+  scheduleSettings: ScheduleSettings
   tasks: Task[]
-  workDays: string[]  // дни с учебными задачами
-  dayJobs: DayJob[]   // рабочие часы по датам
+  workDays: string[]
+  dayJobs: DayJob[]
   streak: StreakState
-  trackXP: Record<Track, number>
+  trackXP: Record<string, number>
   onboardingDone: boolean
   chatHistory: { role: 'user' | 'assistant'; content: string }[]
-  // Analytics data
-  dailyXP: Record<string, Record<Track, number>>  // YYYY-MM-DD -> {track: xp}
-  achievements: string[]  // list of earned achievement IDs
+  dailyXP: Record<string, Record<string, number>>
+  achievements: string[]
   journalEntries: JournalEntry[]
   journalProfiles: Record<string, { text: string; updatedAt: string }>
   vacancies: Vacancy[]
   cvTemplates: CVTemplate[]
   purchases: Purchase[]
+  routineChecks: Record<string, string[]>
+  categories: Category[]
+  templateTasks: TemplateTask[]
 }
 
-export const TRACK_COLORS: Record<Track, string> = {
+// ── Legacy fallbacks (for users who have old data with hardcoded tracks) ──
+export const TRACK_COLORS: Record<string, string> = {
   ai: '#818cf8',
   design: '#f472b6',
   selfdevelopment: '#34d399',
@@ -109,7 +148,7 @@ export const TRACK_COLORS: Record<Track, string> = {
   gym: '#f87171',
 }
 
-export const TRACK_LABELS: Record<Track, string> = {
+export const TRACK_LABELS: Record<string, string> = {
   ai: 'AI',
   design: 'Дизайн',
   selfdevelopment: 'Саморазвитие',
@@ -119,13 +158,19 @@ export const TRACK_LABELS: Record<Track, string> = {
   gym: 'Зал',
 }
 
-// Legacy fallback XP (used only if difficulty/durationMins not set)
-export const TRACK_XP: Record<Track, number> = {
-  ai: 28,
-  design: 21,
-  selfdevelopment: 13,
-  mediabuy: 14,
-  english: 9,
-  polish: 0,  // Polish XP is dynamic — see schedule.ts
-  gym: 9,
+// ── Dynamic helpers — check user categories first, fall back to legacy ──
+export function catColor(track: string, categories: Category[]): string {
+  return categories.find(c => c.id === track)?.color ?? TRACK_COLORS[track] ?? '#818cf8'
+}
+
+export function catLabel(track: string, categories: Category[]): string {
+  return categories.find(c => c.id === track)?.label ?? TRACK_LABELS[track] ?? track
+}
+
+export function catEmoji(track: string, categories: Category[]): string {
+  const LEGACY_EMOJI: Record<string, string> = {
+    ai: '🤖', design: '🎨', selfdevelopment: '🧠',
+    mediabuy: '📈', english: '🗣️', polish: '✍️', gym: '💪',
+  }
+  return categories.find(c => c.id === track)?.emoji ?? LEGACY_EMOJI[track] ?? '📋'
 }

@@ -3,51 +3,56 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  Crown, Scroll,
-  BookOpen, Flame, Zap, Settings, BookMarked, Briefcase, ShoppingBag,
+  LayoutDashboard, CalendarDays, BookMarked, Layers, Bot, LogOut,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
+import { signOut } from '@/lib/sync'
+import { useRouter } from 'next/navigation'
 
 const NAV = [
-  { href: '/',          icon: Crown,          label: 'Цитадель' },
-  { href: '/schedule',  icon: Scroll,         label: 'Хроники' },
-  { href: '/stats',     icon: BookOpen,       label: 'Свитки' },
-  { href: '/journal',   icon: BookMarked,     label: 'Дневник' },
-  { href: '/career',    icon: Briefcase,      label: 'Карьера' },
-  { href: '/shop',      icon: ShoppingBag,    label: 'Магазин' },
-  { href: '/settings',  icon: Settings,       label: 'Настройки' },
+  { href: '/',          icon: LayoutDashboard, label: 'Главная' },
+  { href: '/chat',      icon: Bot,             label: 'Помощник' },
+  { href: '/schedule',  icon: CalendarDays,    label: 'Расписание' },
+  { href: '/pool',      icon: Layers,          label: 'Активности' },
+  { href: '/journal',   icon: BookMarked,      label: 'Дневник' },
 ]
 
-const RANK_NAMES = ['Странник', 'Ученик', 'Воин', 'Рыцарь', 'Страж', 'Чемпион', 'Паладин', 'Легенда', 'Архонт']
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { streak, trackXP, purchases } = useStore()
-  const totalXP = Object.values(trackXP).reduce((a, b) => a + b, 0)
-  const spentXP = purchases.reduce((s, p) => s + p.price, 0)
-  const availableXP = totalXP - spentXP
-  const level = Math.floor(totalXP / 200) + 1
-  const rankIndex = Math.min(Math.floor((level - 1) / 3), RANK_NAMES.length - 1)
-  const rankName = RANK_NAMES[rankIndex]
+  const router = useRouter()
+  const { userName, avatarUrl } = useStore()
+
+  async function handleSignOut() {
+    await signOut()
+    router.push('/login')
+  }
+
+  const firstLetter = userName.trim().charAt(0).toUpperCase() || '?'
 
   return (
     <aside className="flex w-16 flex-col items-center border-r border-border bg-sidebar py-5 lg:w-60 lg:items-start lg:px-4">
 
-      {/* Logo */}
-      <div className="mb-6 flex h-9 w-9 items-center justify-center rounded-xl lg:w-full lg:rounded-2xl lg:h-auto lg:py-0"
+      {/* Logo → Profile page */}
+      <Link
+        href="/profile"
+        className="mb-6 flex h-9 w-9 items-center justify-center rounded-xl lg:w-full lg:rounded-2xl lg:h-auto lg:py-0 group"
         style={{ background: 'none' }}
       >
         <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white"
-          style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-black text-white transition-opacity group-hover:opacity-80 overflow-hidden"
+          style={{ background: avatarUrl ? undefined : 'linear-gradient(135deg, #818cf8, #a78bfa)' }}
         >
-          И
+          {avatarUrl
+            ? <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+            : firstLetter
+          }
         </div>
-        <span className="ml-3 hidden text-sm font-semibold text-foreground lg:block">
-          Цитадель Ильи
+        <span className="ml-3 hidden truncate text-base font-semibold text-foreground transition-opacity group-hover:opacity-70 lg:block">
+          {userName}
         </span>
-      </div>
+      </Link>
 
       {/* Nav */}
       <nav className="flex w-full flex-col gap-0.5">
@@ -74,8 +79,8 @@ export function Sidebar() {
                   style={{ background: '#818cf8' }}
                 />
               )}
-              <Icon size={17} className={cn('shrink-0', active ? 'text-primary' : '')} />
-              <span className="hidden text-sm font-medium lg:block">{label}</span>
+              <Icon size={20} className={cn('shrink-0', active ? 'text-primary' : '')} />
+              <span className="hidden text-base font-medium lg:block">{label}</span>
             </Link>
           )
         })}
@@ -83,39 +88,15 @@ export function Sidebar() {
 
       <div className="flex-1" />
 
-      {/* Streak + XP */}
       <div className="flex w-full flex-col gap-2">
-        <div
-          className="flex items-center justify-center gap-3 rounded-xl px-3 py-3 lg:justify-start"
-          style={{
-            background: 'linear-gradient(135deg, rgba(251,146,60,0.12), rgba(251,146,60,0.04))',
-            boxShadow: '0 0 0 1px rgba(251,146,60,0.1) inset',
-          }}
+        <button
+          onClick={handleSignOut}
+          className="flex w-full items-center justify-center gap-3 rounded-xl px-3 py-2.5 text-muted-foreground transition-all hover:text-red-400 lg:justify-start"
+          style={{ background: 'rgba(255,255,255,0.03)' }}
         >
-          <Flame size={18} className="shrink-0 text-orange-400" />
-          <div className="hidden lg:block">
-            <p className="text-xs text-orange-400/60">Стрик</p>
-            <p className="text-sm font-bold text-orange-300">{streak.current} дней</p>
-          </div>
-          <span className="text-sm font-bold text-orange-300 lg:hidden">{streak.current}</span>
-        </div>
-
-        <Link href="/shop">
-          <div
-            className="flex items-center justify-center gap-3 rounded-xl px-3 py-3 lg:justify-start cursor-pointer transition-all hover:brightness-110"
-            style={{
-              background: 'linear-gradient(135deg, rgba(129,140,248,0.12), rgba(129,140,248,0.04))',
-              boxShadow: '0 0 0 1px rgba(129,140,248,0.1) inset',
-            }}
-          >
-            <Zap size={18} className="shrink-0 text-primary" />
-            <div className="hidden lg:block min-w-0">
-              <p className="text-xs text-primary/60 truncate">{rankName}</p>
-              <p className="text-sm font-bold text-primary">Ур. {level} · {availableXP} XP</p>
-            </div>
-            <span className="text-xs font-bold text-primary lg:hidden">{level}</span>
-          </div>
-        </Link>
+          <LogOut size={18} className="shrink-0" />
+          <span className="hidden text-sm lg:block">Выйти</span>
+        </button>
       </div>
     </aside>
   )
