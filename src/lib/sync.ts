@@ -19,7 +19,8 @@ export async function loadUserData(userId: string) {
   }
 
   if (!data?.data || typeof data.data !== 'object') {
-    console.warn('loadUserData: no data found for user', userId)
+    // New user — create an empty row so future saves work
+    await supabase.from('user_data').upsert({ id: userId, data: {} }, { onConflict: 'id' })
     return false
   }
 
@@ -126,6 +127,29 @@ export async function createBackupIfNeeded(userId: string) {
   }
 
   localStorage.setItem(LAST_BACKUP_KEY, String(now))
+}
+
+// Reset store to clean defaults (called on login to prevent cross-user data leakage)
+export function clearLocalStore() {
+  useStore.setState({
+    userName: '',
+    avatarUrl: '',
+    apiKey: '',
+    tasks: [],
+    workDays: [],
+    dayJobs: [],
+    streak: { current: 0, longest: 0, lastActiveDate: '', freezeUsedMonth: null },
+    trackXP: {},
+    onboardingDone: false,
+    chatHistory: [],
+    dailyXP: {},
+    achievements: [],
+    journalEntries: [],
+    journalProfiles: {},
+    categories: [],
+    templateTasks: [],
+    scheduleSettings: { wakeTime: '07:00', commuteToWorkMin: 30, prepMin: 60, departBufMin: 10 },
+  })
 }
 
 // Sign out and clear local store state

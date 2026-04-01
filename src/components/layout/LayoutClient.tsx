@@ -6,7 +6,7 @@ import { XPNotifications } from '@/components/notifications/XPNotifications'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { useStore } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
-import { loadUserData, saveUserData } from '@/lib/sync'
+import { loadUserData, saveUserData, clearLocalStore } from '@/lib/sync'
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -29,26 +29,28 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.push('/login'); return }
       const userId = session.user.id
+      await initUser(userId, session.user.user_metadata?.display_name)
+    })
 
-      // Set username from auth metadata if available
-      const displayName = session.user.user_metadata?.display_name
+    async function initUser(userId: string, displayName?: string) {
+      // Clear store only if switching to a different user (prevents cross-user data leakage)
+      const lastUserId = typeof window !== 'undefined' ? localStorage.getItem('forge-last-user-id') : null
+      if (lastUserId && lastUserId !== userId) clearLocalStore()
+      if (typeof window !== 'undefined') localStorage.setItem('forge-last-user-id', userId)
+
       if (displayName) setUserName(displayName)
-
-      // Load cloud data first — only allow saves after load completes
       await loadUserData(userId)
       userIdRef.current = userId
       setReady(true)
-    })
+    }
 
     // Listen for auth changes (logout, session expiry)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
         userIdRef.current = null
         router.push('/login')
-      } else if (event === 'SIGNED_IN' && session) {
-        const userId = session.user.id
-        loadUserData(userId).then(() => { userIdRef.current = userId })
       }
+      // SIGNED_IN is handled by getSession above — ignore to prevent double-init
     })
 
     return () => subscription.unsubscribe()

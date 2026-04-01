@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { playTaskComplete, playClick } from '@/lib/sounds'
 import { format, addDays, isToday } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { Monitor, Check, Sun, Home, Pencil, Trash2, Copy, Layers, X, ArrowLeft } from 'lucide-react'
+import { Monitor, Check, Sun, Home, Pencil, Trash2, Copy, Layers, X, ArrowLeft, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { useStore } from '@/lib/store'
 import { calcXP, catColor, catLabel, catEmoji, type Category } from '@/lib/types'
@@ -416,6 +416,7 @@ export default function SchedulePage() {
   const [dragId, setDragId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [weekOffset, setWeekOffset] = useState(0)
 
   function copyDaySummary(dateStr: string, dayTasks: typeof tasks, job: typeof dayJobs[0] | undefined) {
     const dateLabel = format(new Date(dateStr + 'T12:00:00'), 'd MMMM yyyy (EEEE)', { locale: ru })
@@ -446,7 +447,7 @@ export default function SchedulePage() {
     setDragOverId(null)
   }
 
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(new Date(), i))
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(new Date(), i + weekOffset))
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -470,18 +471,29 @@ export default function SchedulePage() {
             {format(new Date(selectedDate + 'T12:00:00'), 'd MMMM yyyy, EEEE', { locale: ru })}
           </p>
         </div>
-        <Link
-          href="/pool"
-          className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-muted-foreground transition-all hover:text-foreground"
-          style={{ background: '#12121e', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset' }}
-        >
-          <Layers size={13} />
-          Активности
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/pool"
+            className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-muted-foreground transition-all hover:text-foreground"
+            style={{ background: '#12121e', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset' }}
+          >
+            <Layers size={13} />
+            Активности
+          </Link>
+        </div>
       </div>
 
       {/* Week strip */}
-      <div className="grid grid-cols-7 gap-1.5">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setWeekOffset(o => Math.max(0, o - 7))}
+          disabled={weekOffset === 0}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all disabled:opacity-20"
+          style={{ background: '#12121e', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset', color: 'rgba(255,255,255,0.4)' }}
+        >
+          <ArrowLeft size={14} />
+        </button>
+        <div className="grid grid-cols-7 gap-1.5 flex-1">
         {weekDays.map(day => {
           const dateStr = format(day, 'yyyy-MM-dd')
           const dayTasks = tasks.filter(t => t.date === dateStr)
@@ -533,18 +545,26 @@ export default function SchedulePage() {
             </button>
           )
         })}
+        </div>
+        <button
+          onClick={() => setWeekOffset(o => o + 7)}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all"
+          style={{ background: '#12121e', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset', color: 'rgba(255,255,255,0.4)' }}
+        >
+          <ArrowRight size={14} />
+        </button>
       </div>
 
-      {/* Day section — only selected day */}
+      {/* Day section — always show selected day */}
       <div className="space-y-4">
-        {weekDays.filter(day => format(day, 'yyyy-MM-dd') === selectedDate).map((day) => {
-          const dateStr = format(day, 'yyyy-MM-dd')
+        {[selectedDate].map((dateStr) => {
+          const day = new Date(dateStr + 'T12:00:00')
           const dayTasks = tasks.filter(t => t.date === dateStr)
           const job = dayJobs.find(j => j.date === dateStr)
           const isTodayDay = isToday(day)
           const doneCount = dayTasks.filter(t => t.completed).length
 
-          if (dayTasks.length === 0 && !job && !isTodayDay) return null
+          // Never return null for selected day — always show add button
 
           const { taskTimes, departureTime, fitsBeforeWork } = computeTimes(dayTasks, job, scheduleSettings)
           const visibleTasks = dayTasks

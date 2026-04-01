@@ -17,10 +17,17 @@ function translateError(msg: string): string {
   return msg
 }
 
+const REMEMBER_KEY = 'forge-remember-email'
+
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(() =>
+    typeof window !== 'undefined' ? (localStorage.getItem(REMEMBER_KEY) ?? '') : ''
+  )
   const [password, setPassword] = useState('')
+  const [remember, setRemember] = useState(() =>
+    typeof window !== 'undefined' ? !!localStorage.getItem(REMEMBER_KEY) : false
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<'login' | 'reset'>('login')
@@ -33,6 +40,8 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
+      if (remember) localStorage.setItem(REMEMBER_KEY, email)
+      else localStorage.removeItem(REMEMBER_KEY)
       router.push('/')
       router.refresh()
     } catch (e) {
@@ -137,7 +146,24 @@ export default function LoginPage() {
                   />
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <div
+                      onClick={() => setRemember(r => !r)}
+                      className="flex h-4 w-4 items-center justify-center rounded transition-all"
+                      style={{
+                        background: remember ? 'linear-gradient(135deg, #818cf8, #a78bfa)' : 'rgba(255,255,255,0.06)',
+                        border: remember ? 'none' : '1px solid rgba(255,255,255,0.15)',
+                      }}
+                    >
+                      {remember && (
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                    <span className="text-xs text-white/40">Запомнить меня</span>
+                  </label>
                   <button
                     type="button"
                     onClick={() => { setMode('reset'); setError(null) }}

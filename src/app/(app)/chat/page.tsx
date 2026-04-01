@@ -7,6 +7,7 @@ import { Send, Loader2, Bot, User, CheckCircle2, Key } from 'lucide-react'
 import Link from 'next/link'
 import { playError, playClick } from '@/lib/sounds'
 import { useStore } from '@/lib/store'
+import { ApiKeySetup } from '@/components/ApiKeySetup'
 import type { Track, DayJob } from '@/lib/types'
 
 function parseInline(text: string): React.ReactNode[] {
@@ -77,20 +78,7 @@ export default function ChatPage() {
   if (!mounted) return null
 
   if (!apiKey) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-6 p-8">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: 'linear-gradient(135deg, rgba(129,140,248,0.2), rgba(167,139,250,0.1))', boxShadow: '0 0 0 1px rgba(129,140,248,0.2) inset' }}>
-          <Key size={22} style={{ color: '#818cf8' }} />
-        </div>
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-foreground">Нужен API ключ</h2>
-          <p className="text-sm text-muted-foreground mt-1 max-w-xs">Добавь свой Anthropic API ключ в профиле чтобы использовать помощника</p>
-        </div>
-        <Link href="/profile" className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90" style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}>
-          Перейти в профиль
-        </Link>
-      </div>
-    )
+    return <ApiKeySetup onSave={setApiKey} />
   }
 
   const executeActions = (actions: Action[]) => {

@@ -4,9 +4,9 @@ import { useState, useRef, useEffect } from 'react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Send, Loader2, Brain, User, Key } from 'lucide-react'
-import Link from 'next/link'
+import { ArrowLeft, Send, Loader2, Brain, User } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { ApiKeySetup } from '@/components/ApiKeySetup'
 import type { DayJob } from '@/lib/types'
 
 function parseInline(text: string): React.ReactNode[] {
@@ -53,7 +53,7 @@ export default function PsychologistPage() {
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  const { userName, apiKey, journalEntries, journalProfiles, tasks, streak, trackXP, workDays, dayJobs, categories } = useStore()
+  const { userName, apiKey, setApiKey, journalEntries, journalProfiles, tasks, streak, trackXP, workDays, dayJobs, categories } = useStore()
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -111,24 +111,7 @@ export default function PsychologistPage() {
   const btnStyle = { background: 'rgba(167,139,250,0.1)', boxShadow: '0 0 0 1px rgba(129,140,248,0.2) inset', color: '#a78bfa' }
 
   if (!apiKey) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-6 p-8">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: 'linear-gradient(135deg, rgba(129,140,248,0.2), rgba(167,139,250,0.1))', boxShadow: '0 0 0 1px rgba(129,140,248,0.2) inset' }}>
-          <Key size={22} style={{ color: '#818cf8' }} />
-        </div>
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-foreground">Нужен API ключ</h2>
-          <p className="text-sm text-muted-foreground mt-1 max-w-xs">Добавь свой Anthropic API ключ в профиле чтобы использовать психолога</p>
-        </div>
-        <Link
-          href="/profile"
-          className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}
-        >
-          Перейти в профиль
-        </Link>
-      </div>
-    )
+    return <ApiKeySetup onSave={setApiKey} />
   }
 
   return (
