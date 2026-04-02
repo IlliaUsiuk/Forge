@@ -67,8 +67,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto flex flex-col">
-        <div className="flex-1 flex flex-col">
+      <main className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
           {children}
           <XPNotifications />
         </div>
