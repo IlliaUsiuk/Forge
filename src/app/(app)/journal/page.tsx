@@ -366,7 +366,7 @@ export default function JournalPage() {
             </div>
             <textarea
               className="flex-1 w-full resize-none bg-transparent px-4 pb-4 text-sm leading-relaxed outline-none"
-              style={{ color: 'rgba(255,255,255,0.8)', minHeight: '300px' }}
+              style={{ color: 'rgba(255,255,255,0.8)', minHeight: '120px' }}
               placeholder="Как прошёл день? Что чувствуешь? Что важного произошло..."
               value={text}
               onChange={e => handleChange(e.target.value)}
