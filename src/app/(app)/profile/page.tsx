@@ -197,7 +197,7 @@ export default function ProfilePage() {
             className="rounded-2xl p-4"
             style={{ background: bg, boxShadow: `0 8px 32px ${glow}, 0 0 0 1px ${glow} inset` }}
           >
-            <p className="text-2xl font-black" style={{ color }}>{value}</p>
+            <p className="text-lg sm:text-2xl font-black leading-tight break-words" style={{ color }}>{value}</p>
             <p className="mt-1 text-xs text-muted-foreground">{label}</p>
           </div>
         ))}
