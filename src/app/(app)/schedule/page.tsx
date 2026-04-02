@@ -497,17 +497,14 @@ export default function SchedulePage() {
         {weekDays.map(day => {
           const dateStr = format(day, 'yyyy-MM-dd')
           const dayTasks = tasks.filter(t => t.date === dateStr)
-          const doneCount = dayTasks.filter(t => t.completed).length
           const isTodayDay = isToday(day)
-          const hasJob = dayJobs.some(j => j.date === dateStr)
-
           const isSelected = dateStr === selectedDate
 
           return (
             <button
               key={dateStr}
               onClick={() => setSelectedDate(dateStr)}
-              className="flex flex-col items-center gap-1.5 rounded-xl p-2.5 w-full transition-all"
+              className="flex flex-col items-center justify-center gap-0.5 rounded-xl py-3 w-full transition-all"
               style={{
                 background: isSelected
                   ? 'linear-gradient(160deg, #16163a, #0f0f25)'
@@ -517,30 +514,14 @@ export default function SchedulePage() {
                   : '0 0 0 1px rgba(255,255,255,0.05) inset',
               }}
             >
-              <p className={`text-[10px] font-bold uppercase tracking-wider ${isSelected ? 'text-primary' : isTodayDay ? 'text-primary/50' : 'text-white/30'}`}>
+              <p className={`text-[9px] font-bold uppercase tracking-wider leading-none ${isSelected ? 'text-primary' : isTodayDay ? 'text-primary/50' : 'text-white/25'}`}>
                 {format(day, 'EEE', { locale: ru })}
               </p>
-              <p className={`text-base font-black leading-none ${isSelected ? 'text-white' : 'text-white/50'}`}>
+              <p className={`text-lg font-black leading-tight ${isSelected ? 'text-white' : 'text-white/50'}`}>
                 {format(day, 'd')}
               </p>
-              {hasJob && <div className="h-1 w-1 rounded-full bg-white/20" title="Работа в маке" />}
               {dayTasks.length > 0 && (
-                <>
-                  <div className="flex flex-wrap justify-center gap-0.5 max-w-full">
-                    {dayTasks.slice(0, 6).map(t => (
-                      <div
-                        key={t.id}
-                        className="h-1.5 w-1.5 rounded-full"
-                        style={{
-                          background: t.completed
-                            ? catColor(t.track, categories)
-                            : 'rgba(255,255,255,0.12)',
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-[9px] text-white/20 font-medium">{doneCount}/{dayTasks.length}</p>
-                </>
+                <div className="h-1 w-1 rounded-full mt-0.5" style={{ background: isSelected ? '#818cf8' : 'rgba(255,255,255,0.2)' }} />
               )}
             </button>
           )
