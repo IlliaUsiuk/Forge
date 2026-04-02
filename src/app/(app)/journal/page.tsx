@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { format, addDays } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import Link from 'next/link'
-import { Trash2, Brain, CheckCircle2, Loader2, MessageSquare, Download, ArrowLeft, ArrowRight } from 'lucide-react'
+import { Trash2, Brain, CheckCircle2, Loader2, MessageSquare, Download, ArrowLeft, ArrowRight, MoreHorizontal } from 'lucide-react'
 import { useStore } from '@/lib/store'
 
 export default function JournalPage() {
@@ -12,6 +12,7 @@ export default function JournalPage() {
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   useEffect(() => { setMounted(true) }, [])
   const today = format(new Date(), 'yyyy-MM-dd')
   const currentMonth = today.slice(0, 7)
@@ -93,37 +94,97 @@ export default function JournalPage() {
           <h1 className="text-2xl font-bold text-white">Дневник</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Мысли, переживания, итоги дня</p>
         </div>
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
+
+        {/* Mobile: ··· menu */}
+        <div className="sm:hidden relative shrink-0">
+          <button
+            onClick={() => setMenuOpen(v => !v)}
+            className="flex h-9 w-9 items-center justify-center rounded-xl transition-all"
+            style={btnStyle}
+          >
+            <MoreHorizontal size={18} />
+          </button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+              <div
+                className="absolute right-0 top-11 z-20 w-52 rounded-2xl overflow-hidden flex flex-col"
+                style={{ background: '#1a1a2e', boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08) inset' }}
+              >
+                <button
+                  onClick={() => { handleAnalyze(); setMenuOpen(false) }}
+                  disabled={analyzing}
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-left transition-all hover:bg-white/5 disabled:opacity-40"
+                  style={{ color: 'rgba(255,255,255,0.8)' }}
+                >
+                  {analyzing ? <Loader2 size={15} className="animate-spin shrink-0" /> : <Brain size={15} className="shrink-0" style={{ color: '#818cf8' }} />}
+                  {analyzing ? 'Анализирую...' : 'Обновить базу'}
+                </button>
+                <Link
+                  href="/journal/profiles"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all hover:bg-white/5"
+                  style={{ color: 'rgba(255,255,255,0.8)' }}
+                >
+                  <Brain size={15} className="shrink-0" style={{ color: '#818cf8' }} />
+                  Заметки{Object.keys(journalProfiles).length > 0 ? ` (${Object.keys(journalProfiles).length})` : ''}
+                </Link>
+                <Link
+                  href="/journal/psychologist"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all hover:bg-white/5"
+                  style={{ color: 'rgba(255,255,255,0.8)' }}
+                >
+                  <MessageSquare size={15} className="shrink-0" style={{ color: '#818cf8' }} />
+                  Психолог
+                </Link>
+                <button
+                  onClick={() => { handleExport(); setMenuOpen(false) }}
+                  disabled={journalEntries.length === 0}
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-left transition-all hover:bg-white/5 disabled:opacity-30"
+                  style={{ color: 'rgba(255,255,255,0.8)', borderTop: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <Download size={15} className="shrink-0" style={{ color: '#818cf8' }} />
+                  Скачать дневник
+                </button>
+              </div>
+            </>
+          )}
+          {analyzeMsg && (
+            <p className="absolute right-0 top-11 text-xs whitespace-nowrap" style={{ color: analyzeMsg === 'База обновлена' ? '#34d399' : '#f87171' }}>
+              {analyzeMsg}
+            </p>
+          )}
+        </div>
+
+        {/* Desktop: row of buttons */}
+        <div className="hidden sm:flex flex-col items-end gap-1.5 shrink-0">
           <div className="flex items-center gap-1.5">
             <button
               onClick={handleAnalyze}
               disabled={analyzing}
-              className="flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3 py-2 text-sm font-semibold transition-all"
+              className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-all"
               style={analyzing ? { background: 'rgba(255,255,255,0.05)', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset', color: 'rgba(255,255,255,0.3)' } : btnStyle}
-              title="Обновить базу"
             >
               {analyzing ? <Loader2 size={14} className="animate-spin" /> : <Brain size={14} />}
-              <span className="hidden sm:inline">{analyzing ? 'Анализирую...' : 'Обновить базу'}</span>
+              {analyzing ? 'Анализирую...' : 'Обновить базу'}
             </button>
-
-            <Link href="/journal/profiles" className="flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3 py-2 text-sm font-semibold transition-all" style={btnStyle} title="Заметки">
+            <Link href="/journal/profiles" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-all" style={btnStyle}>
               <Brain size={14} />
-              <span className="hidden sm:inline">Заметки{Object.keys(journalProfiles).length > 0 ? ` (${Object.keys(journalProfiles).length})` : ''}</span>
-              {Object.keys(journalProfiles).length > 0 && <span className="sm:hidden text-xs">{Object.keys(journalProfiles).length}</span>}
+              Заметки{Object.keys(journalProfiles).length > 0 ? ` (${Object.keys(journalProfiles).length})` : ''}
             </Link>
-            <Link href="/journal/psychologist" className="flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3 py-2 text-sm font-semibold transition-all" style={btnStyle} title="Психолог">
+            <Link href="/journal/psychologist" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-all" style={btnStyle}>
               <MessageSquare size={14} />
-              <span className="hidden sm:inline">Психолог</span>
+              Психолог
             </Link>
             <button
               onClick={handleExport}
               disabled={journalEntries.length === 0}
-              className="flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3 py-2 text-sm font-semibold transition-all disabled:opacity-30"
+              className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-all disabled:opacity-30"
               style={btnStyle}
-              title="Скачать весь дневник"
             >
               <Download size={14} />
-              <span className="hidden sm:inline">Скачать</span>
+              Скачать
             </button>
           </div>
           {analyzeMsg && (
@@ -133,7 +194,7 @@ export default function JournalPage() {
             </p>
           )}
           {currentProfile && !analyzeMsg && (
-            <p className="text-xs text-white/25 hidden sm:block">
+            <p className="text-xs text-white/25">
               База {monthLabel}: обновлена {format(new Date(currentProfile.updatedAt), 'd MMM, HH:mm', { locale: ru })}
             </p>
           )}
