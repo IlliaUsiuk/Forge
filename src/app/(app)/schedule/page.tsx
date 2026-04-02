@@ -706,7 +706,7 @@ export default function SchedulePage() {
                     </span>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {displayTasks.map(task => (
                     <ScheduleTaskCard
                       key={task.id}
@@ -798,7 +798,7 @@ export default function SchedulePage() {
                       После работы
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {afterWorkTasks.map(task => (
                       <ScheduleTaskCard
                         key={task.id}
