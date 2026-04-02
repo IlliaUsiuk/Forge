@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useStore } from '@/lib/store'
 import { signOut } from '@/lib/sync'
+import { supabase } from '@/lib/supabase'
 import { CheckCircle2, Pencil, X, Lock, Camera, AlertTriangle, Eye, EyeOff, LogOut } from 'lucide-react'
 
 const RANK_NAMES = ['Новичок', 'Стажёр', 'Специалист', 'Профи', 'Эксперт', 'Мастер', 'Гуру', 'Легенда', 'Элита']
@@ -14,7 +15,6 @@ export default function ProfilePage() {
   const router = useRouter()
   const {
     userName, setUserName,
-    password, setPassword,
     avatarUrl, setAvatarUrl,
     trackXP, streak, tasks,
     scheduleSettings, setScheduleSettings,
@@ -32,12 +32,11 @@ export default function ProfilePage() {
   const [draftApiKey, setDraftApiKey] = useState(apiKey)
   const [apiKeySaved, setApiKeySaved] = useState(false)
 
-  const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
   const [pwError, setPwError] = useState('')
   const [pwSaved, setPwSaved] = useState(false)
-  const [showCurrent, setShowCurrent] = useState(false)
+  const [pwLoading, setPwLoading] = useState(false)
   const [showNew, setShowNew] = useState(false)
 
   const [showReset, setShowReset] = useState(false)
@@ -59,16 +58,23 @@ export default function ProfilePage() {
     setTimeout(() => setNameSaved(false), 2000)
   }
 
-  function handlePasswordChange(e: React.FormEvent) {
+  async function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault()
     setPwError('')
-    if (currentPw !== password) { setPwError('Неверный текущий пароль'); return }
-    if (newPw.length < 4) { setPwError('Минимум 4 символа'); return }
+    if (newPw.length < 6) { setPwError('Минимум 6 символов'); return }
     if (newPw !== confirmPw) { setPwError('Пароли не совпадают'); return }
-    setPassword(newPw)
-    setCurrentPw(''); setNewPw(''); setConfirmPw('')
-    setPwSaved(true)
-    setTimeout(() => setPwSaved(false), 2500)
+    setPwLoading(true)
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPw })
+      if (error) throw error
+      setNewPw(''); setConfirmPw('')
+      setPwSaved(true)
+      setTimeout(() => setPwSaved(false), 2500)
+    } catch (e) {
+      setPwError(e instanceof Error ? e.message : 'Ошибка смены пароля')
+    } finally {
+      setPwLoading(false)
+    }
   }
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -237,13 +243,12 @@ export default function ProfilePage() {
           ) : (
             <form onSubmit={handlePasswordChange} className="space-y-3">
               {[
-                { label: 'Текущий пароль', value: currentPw, setter: setCurrentPw, show: showCurrent, toggle: () => setShowCurrent(v => !v) },
-                { label: 'Новый пароль', value: newPw, setter: setNewPw, show: showNew, toggle: () => setShowNew(v => !v) },
-                { label: 'Повтори новый', value: confirmPw, setter: setConfirmPw, show: showNew, toggle: () => setShowNew(v => !v) },
-              ].map(({ label, value, setter, show, toggle }, i) => (
+                { label: 'Новый пароль', value: newPw, setter: setNewPw },
+                { label: 'Повтори новый', value: confirmPw, setter: setConfirmPw },
+              ].map(({ label, value, setter }, i) => (
                 <div key={i} className="relative">
                   <input
-                    type={show ? 'text' : 'password'}
+                    type={showNew ? 'text' : 'password'}
                     value={value}
                     onChange={e => setter(e.target.value)}
                     placeholder={label}
@@ -251,18 +256,19 @@ export default function ProfilePage() {
                     className="w-full rounded-xl px-3 py-2.5 pr-10 text-sm text-foreground outline-none"
                     style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
                   />
-                  <button type="button" onClick={toggle} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                    {show ? <EyeOff size={14} /> : <Eye size={14} />}
+                  <button type="button" onClick={() => setShowNew(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    {showNew ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
               ))}
               {pwError && <p className="text-xs text-red-400">{pwError}</p>}
               <button
                 type="submit"
-                className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                disabled={pwLoading}
+                className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}
               >
-                Изменить пароль
+                {pwLoading ? 'Сохраняю...' : 'Изменить пароль'}
               </button>
             </form>
           )}

@@ -47,22 +47,20 @@ function AchievementsBlock({ achievements }: { achievements: string[] }) {
   const tiers = ['easy', 'medium', 'hard'] as const
   return (
     <div className="rounded-2xl p-5 space-y-4" style={{ background: '#0f0f1a', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset' }}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="font-semibold text-foreground">Достижения</h2>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground">{achievements.length} / {ALL_ACHIEVEMENTS.length}</span>
-          <button
-            onClick={() => setShowAll(v => !v)}
-            className="text-xs font-semibold rounded-lg px-2.5 py-1 transition-all"
-            style={{
-              background: showAll ? 'rgba(129,140,248,0.08)' : 'rgba(129,140,248,0.12)',
-              color: '#818cf8',
-              border: '1px solid rgba(129,140,248,0.25)',
-            }}
-          >
-            {showAll ? 'Скрыть' : 'Показать все'}
-          </button>
-        </div>
+        <button
+          onClick={() => setShowAll(v => !v)}
+          className="flex items-center gap-1.5 text-xs font-semibold rounded-lg px-2.5 py-1 transition-all shrink-0"
+          style={{
+            background: showAll ? 'rgba(129,140,248,0.08)' : 'rgba(129,140,248,0.12)',
+            color: '#818cf8',
+            border: '1px solid rgba(129,140,248,0.25)',
+          }}
+        >
+          <span className="text-muted-foreground font-normal">{achievements.length}/{ALL_ACHIEVEMENTS.length}</span>
+          {showAll ? 'Скрыть' : 'Показать все'}
+        </button>
       </div>
       {tiers.map(tier => {
         const cfg = TIER_CONFIG[tier]

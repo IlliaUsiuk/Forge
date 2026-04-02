@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { playError } from '@/lib/sounds'
 import { format, addDays } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import Link from 'next/link'
@@ -89,40 +88,42 @@ export default function JournalPage() {
     <div className="p-4 sm:p-6 h-full flex flex-col gap-4">
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Дневник</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Мысли, переживания, итоги дня</p>
         </div>
-        <div className="flex flex-col items-end gap-1.5">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={handleAnalyze}
               disabled={analyzing}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all"
+              className="flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3 py-2 text-sm font-semibold transition-all"
               style={analyzing ? { background: 'rgba(255,255,255,0.05)', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset', color: 'rgba(255,255,255,0.3)' } : btnStyle}
+              title="Обновить базу"
             >
               {analyzing ? <Loader2 size={14} className="animate-spin" /> : <Brain size={14} />}
-              {analyzing ? 'Анализирую...' : 'Обновить базу'}
+              <span className="hidden sm:inline">{analyzing ? 'Анализирую...' : 'Обновить базу'}</span>
             </button>
 
-            <Link href="/journal/profiles" className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all" style={btnStyle}>
+            <Link href="/journal/profiles" className="flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3 py-2 text-sm font-semibold transition-all" style={btnStyle} title="Заметки">
               <Brain size={14} />
-              Заметки{Object.keys(journalProfiles).length > 0 ? ` (${Object.keys(journalProfiles).length})` : ''}
+              <span className="hidden sm:inline">Заметки{Object.keys(journalProfiles).length > 0 ? ` (${Object.keys(journalProfiles).length})` : ''}</span>
+              {Object.keys(journalProfiles).length > 0 && <span className="sm:hidden text-xs">{Object.keys(journalProfiles).length}</span>}
             </Link>
-            <Link href="/journal/psychologist" className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all" style={btnStyle}>
+            <Link href="/journal/psychologist" className="flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3 py-2 text-sm font-semibold transition-all" style={btnStyle} title="Психолог">
               <MessageSquare size={14} />
-              Психолог
+              <span className="hidden sm:inline">Психолог</span>
             </Link>
             <button
               onClick={handleExport}
               disabled={journalEntries.length === 0}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-all disabled:opacity-30"
+              className="flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3 py-2 text-sm font-semibold transition-all disabled:opacity-30"
               style={btnStyle}
               title="Скачать весь дневник"
             >
               <Download size={14} />
-              Скачать
+              <span className="hidden sm:inline">Скачать</span>
             </button>
           </div>
           {analyzeMsg && (
@@ -132,7 +133,7 @@ export default function JournalPage() {
             </p>
           )}
           {currentProfile && !analyzeMsg && (
-            <p className="text-xs text-white/25">
+            <p className="text-xs text-white/25 hidden sm:block">
               База {monthLabel}: обновлена {format(new Date(currentProfile.updatedAt), 'd MMM, HH:mm', { locale: ru })}
             </p>
           )}
@@ -175,11 +176,50 @@ export default function JournalPage() {
         </div>
       )}
 
+      {/* Mobile: horizontal date strip */}
+      <div
+        className="flex sm:hidden gap-1.5 overflow-x-auto pb-1 -mx-4 px-4"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {days.map(date => {
+          const hasEntry = journalEntries.some(e => e.date === date)
+          const isToday = date === today
+          const isSelected = date === selectedDate
+          return (
+            <button
+              key={date}
+              onClick={() => setSelectedDate(date)}
+              className="shrink-0 rounded-xl px-3 py-2 text-center transition-all"
+              style={{
+                background: isSelected
+                  ? 'linear-gradient(135deg, rgba(129,140,248,0.2), rgba(167,139,250,0.1))'
+                  : 'rgba(255,255,255,0.04)',
+                boxShadow: isSelected ? '0 0 0 1px rgba(129,140,248,0.25) inset' : '0 0 0 1px rgba(255,255,255,0.06) inset',
+              }}
+            >
+              <p className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: isSelected ? '#818cf8' : 'rgba(255,255,255,0.3)' }}
+              >
+                {isToday ? 'Сег' : format(new Date(date + 'T12:00:00'), 'EEE', { locale: ru })}
+              </p>
+              <p className="text-sm font-semibold mt-0.5"
+                style={{ color: isSelected ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)' }}
+              >
+                {format(new Date(date + 'T12:00:00'), 'd', { locale: ru })}
+              </p>
+              {hasEntry && (
+                <div className="mt-1 h-1 w-3 rounded-full mx-auto" style={{ background: '#818cf880' }} />
+              )}
+            </button>
+          )
+        })}
+      </div>
+
       <div className="flex gap-4 flex-1 min-h-0">
 
-        {/* Date list */}
+        {/* Desktop: vertical date list */}
         <div
-          className="w-36 shrink-0 rounded-2xl overflow-y-auto flex flex-col gap-1 p-2"
+          className="hidden sm:flex w-36 shrink-0 rounded-2xl overflow-y-auto flex-col gap-1 p-2"
           style={{ background: '#0f0f1a', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset', maxHeight: '70vh' }}
         >
           {days.map(date => {
