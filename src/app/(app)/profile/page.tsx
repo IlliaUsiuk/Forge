@@ -316,74 +316,47 @@ export default function ProfilePage() {
         {/* API Key */}
       <div className="rounded-2xl p-6 space-y-4" style={{ background: '#0f0f1a', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset' }}>
         <h2 className="text-base font-semibold text-foreground">API ключ помощника</h2>
-        <div className="flex gap-2">
-          <input
-            type="password"
-            value={draftApiKey}
-            onChange={e => { setDraftApiKey(e.target.value); setApiKeySaved(false) }}
-            placeholder="sk-ant-api03-..."
-            className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
-          />
-          <button
-            onClick={() => { setApiKey(draftApiKey.trim()); setApiKeySaved(true); setTimeout(() => setApiKeySaved(false), 2000) }}
-            disabled={!draftApiKey.trim() || draftApiKey.trim() === apiKey}
-            className="rounded-xl px-4 py-2.5 text-sm font-semibold transition-all disabled:opacity-40"
-            style={{ background: apiKeySaved ? 'rgba(52,211,153,0.15)' : 'rgba(129,140,248,0.15)', color: apiKeySaved ? '#34d399' : '#818cf8', border: `1px solid ${apiKeySaved ? 'rgba(52,211,153,0.3)' : 'rgba(129,140,248,0.3)'}` }}
-          >
-            {apiKeySaved ? 'Сохранено' : 'Сохранить'}
-          </button>
-        </div>
+        <input
+          type="password"
+          value={draftApiKey}
+          onChange={e => { setDraftApiKey(e.target.value); setApiKeySaved(false) }}
+          placeholder="sk-ant-api03-..."
+          className="w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+        />
         {apiKey && <p className="text-xs text-muted-foreground">Ключ сохранён: {apiKey.slice(0, 12)}…</p>}
+        <button
+          onClick={() => { setApiKey(draftApiKey.trim()); setApiKeySaved(true); setTimeout(() => setApiKeySaved(false), 2000) }}
+          disabled={!draftApiKey.trim() || draftApiKey.trim() === apiKey}
+          className="w-full rounded-xl py-2.5 text-sm font-semibold transition-all disabled:opacity-40"
+          style={{ background: apiKeySaved ? 'rgba(52,211,153,0.15)' : 'rgba(129,140,248,0.15)', color: apiKeySaved ? '#34d399' : '#818cf8', border: `1px solid ${apiKeySaved ? 'rgba(52,211,153,0.3)' : 'rgba(129,140,248,0.3)'}` }}
+        >
+          {apiKeySaved ? 'Сохранено ✓' : 'Сохранить'}
+        </button>
       </div>
 
         {/* Schedule Settings */}
       <div className="rounded-2xl p-6 space-y-4" style={{ background: '#0f0f1a', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset' }}>
         <h2 className="text-base font-semibold text-foreground">Настройки расписания</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">Время подъёма</label>
-            <input
-              type="time"
-              value={scheduleSettings.wakeTime}
-              onChange={e => setScheduleSettings({ wakeTime: e.target.value })}
-              className="w-full rounded-xl px-3 py-2.5 text-sm text-foreground outline-none"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', colorScheme: 'dark' }}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">Утренняя подготовка (мин)</label>
-            <input
-              type="number"
-              min={0} max={240}
-              value={scheduleSettings.prepMin}
-              onChange={e => setScheduleSettings({ prepMin: Number(e.target.value) })}
-              className="w-full rounded-xl px-3 py-2.5 text-sm text-foreground outline-none"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">Дорога до работы (мин)</label>
-            <input
-              type="number"
-              min={0} max={240}
-              value={scheduleSettings.commuteToWorkMin}
-              onChange={e => setScheduleSettings({ commuteToWorkMin: Number(e.target.value) })}
-              className="w-full rounded-xl px-3 py-2.5 text-sm text-foreground outline-none"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block">Буфер перед выездом (мин)</label>
-            <input
-              type="number"
-              min={0} max={60}
-              value={scheduleSettings.departBufMin}
-              onChange={e => setScheduleSettings({ departBufMin: Number(e.target.value) })}
-              className="w-full rounded-xl px-3 py-2.5 text-sm text-foreground outline-none"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-            />
-          </div>
+        <div className="space-y-3">
+          {[
+            { label: 'Время подъёма', type: 'time', value: scheduleSettings.wakeTime, onChange: (v: string) => setScheduleSettings({ wakeTime: v }), extra: { colorScheme: 'dark' } },
+            { label: 'Утренняя подготовка (мин)', type: 'number', value: String(scheduleSettings.prepMin), onChange: (v: string) => setScheduleSettings({ prepMin: Number(v) }), min: 0, max: 240 },
+            { label: 'Дорога до работы (мин)', type: 'number', value: String(scheduleSettings.commuteToWorkMin), onChange: (v: string) => setScheduleSettings({ commuteToWorkMin: Number(v) }), min: 0, max: 240 },
+            { label: 'Буфер перед выездом (мин)', type: 'number', value: String(scheduleSettings.departBufMin), onChange: (v: string) => setScheduleSettings({ departBufMin: Number(v) }), min: 0, max: 60 },
+          ].map(({ label, type, value, onChange, ...rest }) => (
+            <div key={label}>
+              <label className="text-xs text-muted-foreground mb-1.5 block">{label}</label>
+              <input
+                type={type}
+                value={value}
+                onChange={e => onChange(e.target.value)}
+                className="w-full rounded-xl px-3 py-2.5 text-sm text-foreground outline-none"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', ...(rest.extra ?? {}) }}
+                {...(rest.min !== undefined ? { min: rest.min, max: rest.max } : {})}
+              />
+            </div>
+          ))}
         </div>
         <p className="text-xs text-muted-foreground">Используется для расчёта времени выезда на работу</p>
       </div>
