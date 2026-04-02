@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { Plus, Pencil, Trash2, Check, CalendarPlus, ChevronDown, ArrowLeft, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import type { TemplateTask } from '@/lib/types'
+import { Portal } from '@/components/Portal'
 
 // ── Preset types (used inside card creation, not as standalone entities) ──────
 const PRESETS = [
@@ -107,11 +108,13 @@ function AddToDateButton({ onAdd, color }: { onAdd: (date: string) => void; colo
 
       {/* Mobile: fixed centered overlay */}
       {open && (
-        <div className="sm:hidden fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={() => setOpen(false)}>
-          <div onClick={e => e.stopPropagation()}>
-            {panel}
+        <Portal>
+          <div className="sm:hidden fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={() => setOpen(false)}>
+            <div onClick={e => e.stopPropagation()}>
+              {panel}
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   )
@@ -395,18 +398,20 @@ export default function PoolPage() {
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-8 text-center">
         <style>{`@keyframes wave{0%,100%{transform:rotate(0deg)}20%{transform:rotate(-15deg)}40%{transform:rotate(15deg)}60%{transform:rotate(-10deg)}80%{transform:rotate(10deg)}}`}</style>
         {creating && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-            onClick={(e) => { if (e.target === e.currentTarget) setCreating(false) }}
-          >
+          <Portal>
             <div
-              className="w-full max-w-lg rounded-2xl p-6 shadow-2xl"
-              style={{ background: '#0d0b18', boxShadow: '0 0 0 1px rgba(255,255,255,0.08) inset, 0 24px 60px rgba(0,0,0,0.6)' }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+              onClick={(e) => { if (e.target === e.currentTarget) setCreating(false) }}
             >
-              <TaskCardForm onSave={handleSave} onCancel={() => setCreating(false)} />
+              <div
+                className="w-full max-w-lg rounded-2xl p-6 shadow-2xl"
+                style={{ background: '#0d0b18', boxShadow: '0 0 0 1px rgba(255,255,255,0.08) inset, 0 24px 60px rgba(0,0,0,0.6)' }}
+              >
+                <TaskCardForm onSave={handleSave} onCancel={() => setCreating(false)} />
+              </div>
             </div>
-          </div>
+          </Portal>
         )}
         <div
           className="flex h-20 w-20 items-center justify-center rounded-3xl text-4xl"
@@ -441,31 +446,33 @@ export default function PoolPage() {
 
       {/* Modal overlay */}
       {showModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-          onClick={(e) => { if (e.target === e.currentTarget) { setCreating(false); setEditingId(null) } }}
-        >
+        <Portal>
           <div
-            className="w-full max-w-lg rounded-2xl p-6 shadow-2xl"
-            style={{ background: '#0d0b18', boxShadow: '0 0 0 1px rgba(255,255,255,0.08) inset, 0 24px 60px rgba(0,0,0,0.6)' }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) { setCreating(false); setEditingId(null) } }}
           >
-            <TaskCardForm
-              initial={modalTask ? { ...modalTask, presetKey: modalPreset?.key } : undefined}
-              initialPresetKey={modalPreset?.key}
-              onSave={(data) => {
-                const c = resolveOrCreateCategory(data.preset)
-                if (editingId && modalTask) {
-                  updateTemplateTask(editingId, { title: data.title, categoryId: c.id, durationMins: data.durationMins, xp: data.xp })
-                  setEditingId(null)
-                } else {
-                  handleSave(data)
-                }
-              }}
-              onCancel={() => { setCreating(false); setEditingId(null) }}
-            />
+            <div
+              className="w-full max-w-lg rounded-2xl p-6 shadow-2xl"
+              style={{ background: '#0d0b18', boxShadow: '0 0 0 1px rgba(255,255,255,0.08) inset, 0 24px 60px rgba(0,0,0,0.6)' }}
+            >
+              <TaskCardForm
+                initial={modalTask ? { ...modalTask, presetKey: modalPreset?.key } : undefined}
+                initialPresetKey={modalPreset?.key}
+                onSave={(data) => {
+                  const c = resolveOrCreateCategory(data.preset)
+                  if (editingId && modalTask) {
+                    updateTemplateTask(editingId, { title: data.title, categoryId: c.id, durationMins: data.durationMins, xp: data.xp })
+                    setEditingId(null)
+                  } else {
+                    handleSave(data)
+                  }
+                }}
+                onCancel={() => { setCreating(false); setEditingId(null) }}
+              />
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       <div className="flex items-start justify-between gap-3">

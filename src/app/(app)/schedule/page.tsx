@@ -8,6 +8,7 @@ import { Monitor, Check, Sun, Home, Pencil, Trash2, Copy, Layers, X, ArrowLeft, 
 import Link from 'next/link'
 import { useStore } from '@/lib/store'
 import { calcXP, catColor, catLabel, catEmoji, type Category } from '@/lib/types'
+import { Portal } from '@/components/Portal'
 
 const PRESETS = [
   { key: 'sport',    label: 'Спорт',      color: '#f87171', emoji: '🏃', emojis: ['🏋️','🏃','⚽','🎯','🏊','🚴','🥊','🧘','🏆','🤸','🎽','🏅','🏄','🥅','🎾','🛹'] },
@@ -68,6 +69,7 @@ function AddTaskModal({ dateStr, onClose, onAdd }: {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
       <div
         className="w-full max-w-md rounded-2xl p-5 space-y-4"
@@ -262,6 +264,7 @@ function AddTaskModal({ dateStr, onClose, onAdd }: {
         )}
       </div>
     </div>
+    </Portal>
   )
 }
 
