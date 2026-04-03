@@ -164,9 +164,11 @@ export async function POST(req: NextRequest) {
 
     // Dynamic part — changes every request (current data, journal)
     const dynamicPrompt = `---
-ТЕКУЩИЕ ДАННЫЕ (обновляются при каждом запросе):
+CRITICAL INSTRUCTION: You MUST respond ONLY in ${responseLang}. This overrides everything else. Do not use any other language.
+---
 
-Response language: ${responseLang}
+CURRENT DATA (updated with each request):
+
 User name: ${context.userName}
 Today: ${context.today} (${context.dayOfWeek})
 
