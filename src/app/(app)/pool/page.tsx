@@ -378,6 +378,10 @@ export default function PoolPage() {
   function handleSave(data: { title: string; emoji: string; durationMins: number; xp: number; weeklyFrequency: number; defaultTimeStart: string; preset: Preset }) {
     const cat = resolveOrCreateCategory(data.preset)
     addTemplateTask({ title: data.title, categoryId: cat.id, durationMins: data.durationMins, xp: data.xp, weeklyFrequency: data.weeklyFrequency, defaultTimeStart: data.defaultTimeStart || undefined })
+    if (data.weeklyFrequency === 7) {
+      const today = format(new Date(), 'yyyy-MM-dd')
+      addTask({ title: data.title, track: cat.id, date: today, isRecurring: false, xp: data.xp, durationMins: data.durationMins, emoji: cat.emoji, timeStart: data.defaultTimeStart || undefined })
+    }
     setCreating(false)
   }
 
