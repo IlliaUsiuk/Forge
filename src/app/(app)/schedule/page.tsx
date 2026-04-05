@@ -784,7 +784,7 @@ export default function SchedulePage() {
                     <Monitor size={16} className="text-white/30" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-white/55">{job.label ?? 'Work'}</p>
+                    <p className="text-sm font-bold text-white/55">{t.schedule.work}</p>
                     <p className="text-xs text-white/25 mt-0.5">{job.start} — {job.end}</p>
                   </div>
                   <span className="text-sm font-black text-white/20">{job.start}</span>
