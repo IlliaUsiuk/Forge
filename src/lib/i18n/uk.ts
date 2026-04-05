@@ -208,6 +208,12 @@ export const uk: Translations = {
       health: 'Здоровʼя',
       other: 'Інше',
     },
+    beforeWork: 'До роботи',
+    afterWork: 'Після роботи',
+    depart: 'Виїзд',
+    minToWork: 'хв до роботи',
+    homeAt: 'Вдома о',
+    laterThanBedtime: 'пізніше цільового часу сну, сон зсунеться',
   },
 
   journal: {

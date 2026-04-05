@@ -714,7 +714,7 @@ export default function SchedulePage() {
                   <div className="flex items-center gap-2 mb-3">
                     <Sun size={12} style={{ color: 'rgba(251,191,36,0.45)' }} />
                     <span className="text-[11px] font-semibold text-white/25 uppercase tracking-widest">
-                      Before work
+                      {t.schedule.beforeWork}
                     </span>
                   </div>
                 )}
@@ -762,9 +762,9 @@ export default function SchedulePage() {
                 <div className="flex items-center gap-2.5 px-5 pb-3">
                   <span style={{ fontSize: '13px', flexShrink: 0 }}>🚌</span>
                   <span className="text-xs font-bold text-white/30">
-                    Depart {departureTime}
+                    {t.schedule.depart} {departureTime}
                   </span>
-                  <span className="text-[10px] text-white/15 ml-1">({scheduleSettings.commuteToWorkMin} min to work)</span>
+                  <span className="text-[10px] text-white/15 ml-1">({scheduleSettings.commuteToWorkMin} {t.schedule.minToWork})</span>
                 </div>
               )}
 
@@ -796,7 +796,7 @@ export default function SchedulePage() {
                 <div className="flex items-center gap-2.5 px-5 pb-4">
                   <Home size={13} style={{ color: 'rgba(255,255,255,0.18)', flexShrink: 0 }} />
                   <span className="text-xs font-medium text-white/18">
-                    Home at {arrivalTime ?? minToTime(timeToMin(job.end) + 60)}
+                    {t.schedule.homeAt} {arrivalTime ?? minToTime(timeToMin(job.end) + 60)}
                   </span>
                 </div>
               )}
@@ -807,7 +807,7 @@ export default function SchedulePage() {
                   <div className="flex items-center gap-2 mb-3">
                     <Home size={12} style={{ color: 'rgba(255,255,255,0.25)' }} />
                     <span className="text-[11px] font-semibold text-white/25 uppercase tracking-widest">
-                      After work
+                      {t.schedule.afterWork}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -860,7 +860,7 @@ export default function SchedulePage() {
                   >
                     <span className="text-sm shrink-0">⚠️</span>
                     <p className="text-[11px]" style={{ color: 'rgba(248,113,113,0.65)' }}>
-                      Home at {arrivalTime} — later than target bedtime, sleep will shift
+                      {t.schedule.homeAt} {arrivalTime} — {t.schedule.laterThanBedtime}
                     </p>
                   </div>
                 </div>

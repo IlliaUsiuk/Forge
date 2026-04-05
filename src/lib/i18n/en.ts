@@ -206,6 +206,12 @@ export const en = {
       health: 'Health',
       other: 'Other',
     },
+    beforeWork: 'Before work',
+    afterWork: 'After work',
+    depart: 'Depart',
+    minToWork: 'min to work',
+    homeAt: 'Home at',
+    laterThanBedtime: 'later than target bedtime, sleep will shift',
   },
 
   journal: {
