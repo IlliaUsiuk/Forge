@@ -462,9 +462,12 @@ export default function SchedulePage() {
   const selectedDayObj = new Date(selectedDate + 'T12:00:00')
   const today = new Date(); today.setHours(0,0,0,0)
   const mobileDays = [-1, 0, 1].map(offset => addDays(selectedDayObj, offset))
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
+  const isViewingPast = selectedDate < todayStr
   function mobileNavDay(dir: -1 | 1) {
     const next = addDays(selectedDayObj, dir)
-    if (dir === -1 && next < today) return
+    const minDate = addDays(new Date(), -30)
+    if (dir === -1 && next < minDate) return
     setSelectedDate(format(next, 'yyyy-MM-dd'))
   }
 
@@ -491,14 +494,25 @@ export default function SchedulePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/pool"
-            className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-muted-foreground transition-all hover:text-foreground"
-            style={{ background: '#12121e', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset' }}
-          >
-            <Layers size={13} />
-            <span className="hidden sm:inline">{t.nav.activities}</span>
-          </Link>
+          {isViewingPast ? (
+            <button
+              onClick={() => { setSelectedDate(todayStr); setWeekOffset(0) }}
+              className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all hover:opacity-80"
+              style={{ background: 'linear-gradient(135deg, rgba(129,140,248,0.2), rgba(167,139,250,0.1))', boxShadow: '0 0 0 1px rgba(129,140,248,0.3) inset', color: '#818cf8' }}
+            >
+              <ArrowRight size={13} />
+              <span>{t.common.today}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => { const y = format(addDays(new Date(), -1), 'yyyy-MM-dd'); setSelectedDate(y); setWeekOffset(-7) }}
+              className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-muted-foreground transition-all hover:text-foreground"
+              style={{ background: '#12121e', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset' }}
+            >
+              <ArrowLeft size={13} />
+              <span className="hidden sm:inline">{t.common.yesterday}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -508,14 +522,14 @@ export default function SchedulePage() {
         <button
           onClick={() => mobileNavDay(-1)}
           className="sm:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all disabled:opacity-20"
-          disabled={selectedDate === format(new Date(), 'yyyy-MM-dd')}
+          disabled={selectedDate <= format(addDays(new Date(), -30), 'yyyy-MM-dd')}
           style={{ background: '#12121e', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset', color: 'rgba(255,255,255,0.4)' }}
         >
           <ArrowLeft size={14} />
         </button>
         <button
-          onClick={() => setWeekOffset(o => Math.max(0, o - 7))}
-          disabled={weekOffset === 0}
+          onClick={() => setWeekOffset(o => Math.max(-30, o - 7))}
+          disabled={weekOffset <= -30}
           className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all disabled:opacity-20"
           style={{ background: '#12121e', boxShadow: '0 0 0 1px rgba(255,255,255,0.06) inset', color: 'rgba(255,255,255,0.4)' }}
         >
@@ -533,13 +547,12 @@ export default function SchedulePage() {
             return (
               <button
                 key={dateStr}
-                onClick={() => !isPast && setSelectedDate(dateStr)}
-                disabled={isPast}
-                className="flex flex-col items-center justify-center gap-0.5 rounded-xl py-3 w-full transition-all disabled:cursor-not-allowed"
+                onClick={() => setSelectedDate(dateStr)}
+                className="flex flex-col items-center justify-center gap-0.5 rounded-xl py-3 w-full transition-all"
                 style={{
                   background: isSelected ? 'linear-gradient(160deg, #16163a, #0f0f25)' : '#0f0f1a',
                   boxShadow: isSelected ? '0 0 0 1px rgba(129,140,248,0.4) inset' : '0 0 0 1px rgba(255,255,255,0.05) inset',
-                  opacity: isPast ? 0.3 : 1,
+                  opacity: isPast && !isSelected ? 0.5 : 1,
                 }}
               >
                 <p className={`text-[9px] font-bold uppercase tracking-wider leading-none ${isSelected ? 'text-primary' : isTodayDay ? 'text-primary/50' : 'text-white/25'}`}>

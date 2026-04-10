@@ -27,6 +27,7 @@ export const en = {
     close: 'Close',
     or: 'or',
     today: 'Today',
+    yesterday: 'Yesterday',
     level: 'Level',
     xp: 'XP',
     days: 'days',

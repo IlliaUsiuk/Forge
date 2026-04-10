@@ -29,6 +29,7 @@ export const uk: Translations = {
     close: 'Закрити',
     or: 'або',
     today: 'Сьогодні',
+    yesterday: 'Вчора',
     level: 'Рівень',
     xp: 'XP',
     days: 'днів',
