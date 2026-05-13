@@ -77,6 +77,21 @@ export const DEFAULT_SCHEDULE_SETTINGS: ScheduleSettings = {
   departBufMin: 10,
 }
 
+export type PlanStep = {
+  id: string
+  text: string
+  pinned: boolean
+}
+
+export type Plan = {
+  id: string
+  steps: PlanStep[]
+  startDate: string   // YYYY-MM-DD
+  endDate?: string
+  completed: boolean
+  createdAt: string
+}
+
 export type AppState = {
   userName: string
   password: string
@@ -96,6 +111,7 @@ export type AppState = {
   journalProfiles: Record<string, { text: string; updatedAt: string }>
   categories: Category[]
   templateTasks: TemplateTask[]
+  plans: Plan[]
 }
 
 // ── Legacy fallbacks (for users who have old data with hardcoded tracks) ──

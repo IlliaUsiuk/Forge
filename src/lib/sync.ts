@@ -70,6 +70,7 @@ export async function saveUserData(userId: string) {
     'chatHistory', 'dailyXP', 'achievements',
     'journalEntries', 'journalProfiles',
     'categories', 'templateTasks', 'scheduleSettings',
+    'plans',
   ]
 
   for (const key of keys) {
@@ -149,6 +150,7 @@ export function clearLocalStore() {
     categories: [],
     templateTasks: [],
     scheduleSettings: { wakeTime: '07:00', commuteToWorkMin: 30, prepMin: 60, departBufMin: 10 },
+    plans: [],
   })
 }
 
@@ -174,5 +176,6 @@ export async function signOut() {
     categories: [],
     templateTasks: [],
     scheduleSettings: { wakeTime: '07:00', commuteToWorkMin: 30, prepMin: 60, departBufMin: 10 },
+    plans: [],
   })
 }

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { format } from 'date-fns'
-import type { Task, Track, AppState, StreakState, DayJob, JournalEntry, Category, TemplateTask } from './types'
+import type { Task, Track, AppState, StreakState, DayJob, JournalEntry, Category, TemplateTask, Plan, PlanStep } from './types'
 import { calcXP, DEFAULT_SCHEDULE_SETTINGS } from './types'
 import { generateRecurringTasks } from './schedule'
 import { processStreakOnOpen } from './streak'
@@ -144,6 +144,13 @@ type Store = AppState & {
   deleteJournalProfile: (month: string) => void
   addChatMessage: (msg: { role: 'user' | 'assistant'; content: string }) => void
   clearChatHistory: () => void
+  createPlan: () => void
+  addPlanStep: (planId: string, text: string) => void
+  updatePlanStep: (planId: string, stepId: string, text: string) => void
+  togglePlanStepPin: (planId: string, stepId: string) => void
+  deletePlanStep: (planId: string, stepId: string) => void
+  completePlan: (planId: string) => void
+  deletePlan: (planId: string) => void
 }
 
 const STORED_PASSWORD_KEY = 'forge-lock-password'
@@ -168,6 +175,7 @@ export const useStore = create<Store>()((set, get) => ({
       categories: [],
       templateTasks: [],
       scheduleSettings: DEFAULT_SCHEDULE_SETTINGS,
+      plans: [],
 
       setUserName: (name) => set({ userName: name.trim() || 'User' }),
       setPassword: (password) => {
@@ -396,6 +404,56 @@ export const useStore = create<Store>()((set, get) => ({
         })
       },
       clearChatHistory: () => set({ chatHistory: [] }),
+
+      createPlan: () => {
+        const today = format(new Date(), 'yyyy-MM-dd')
+        const plan: Plan = {
+          id: `plan-${Date.now()}`,
+          steps: [],
+          startDate: today,
+          completed: false,
+          createdAt: new Date().toISOString(),
+        }
+        set(s => ({ plans: [...s.plans, plan] }))
+      },
+      addPlanStep: (planId, text) => {
+        const step: PlanStep = {
+          id: `step-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          text,
+          pinned: true,
+        }
+        set(s => ({ plans: s.plans.map(p => p.id === planId ? { ...p, steps: [...p.steps, step] } : p) }))
+      },
+      updatePlanStep: (planId, stepId, text) => {
+        set(s => ({
+          plans: s.plans.map(p => p.id === planId
+            ? { ...p, steps: p.steps.map(step => step.id === stepId ? { ...step, text } : step) }
+            : p),
+        }))
+      },
+      togglePlanStepPin: (planId, stepId) => {
+        set(s => ({
+          plans: s.plans.map(p => p.id === planId
+            ? { ...p, steps: p.steps.map(step => step.id === stepId ? { ...step, pinned: !step.pinned } : step) }
+            : p),
+        }))
+      },
+      deletePlanStep: (planId, stepId) => {
+        set(s => ({
+          plans: s.plans.map(p => p.id === planId
+            ? { ...p, steps: p.steps.filter(step => step.id !== stepId) }
+            : p),
+        }))
+      },
+      completePlan: (planId) => {
+        const today = format(new Date(), 'yyyy-MM-dd')
+        set(s => ({
+          plans: s.plans.map(p => p.id === planId ? { ...p, completed: true, endDate: today } : p),
+        }))
+      },
+      deletePlan: (planId) => {
+        set(s => ({ plans: s.plans.filter(p => p.id !== planId) }))
+      },
 
       processOnOpen: () => {
         const state = get()

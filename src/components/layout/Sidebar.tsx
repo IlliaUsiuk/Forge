@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, CalendarDays, BookMarked, Layers, Bot,
+  LayoutDashboard, CalendarDays, BookMarked, Layers, Bot, ListOrdered,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
@@ -20,6 +20,7 @@ export function Sidebar() {
     { href: '/schedule', icon: CalendarDays,    label: t.nav.schedule },
     { href: '/pool',     icon: Layers,          label: t.nav.activities },
     { href: '/journal',  icon: BookMarked,      label: t.nav.journal },
+    { href: '/plans',    icon: ListOrdered,     label: t.nav.plans },
   ]
 
   const firstLetter = userName.trim().charAt(0).toUpperCase() || '?'
