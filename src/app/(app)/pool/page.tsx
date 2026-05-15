@@ -8,6 +8,7 @@ import type { TemplateTask } from '@/lib/types'
 import { translateCatLabel } from '@/lib/types'
 import { Portal } from '@/components/Portal'
 import { useT } from '@/lib/i18n'
+import { translateText } from '@/lib/translate'
 
 // ── Preset types (used inside card creation, not as standalone entities) ──────
 const PRESETS = [
@@ -149,6 +150,7 @@ function TaskCardForm({
   const [weeklyFrequency, setWeeklyFrequency] = useState(initial?.weeklyFrequency ?? 3)
   const [defaultTimeStart, setDefaultTimeStart] = useState(initial?.defaultTimeStart ?? '')
   const [durationMins, setDurationMins] = useState(initial?.durationMins && initial.durationMins > 0 ? initial.durationMins : 60)
+  const [translating, setTranslating] = useState(false)
 
   const DIFFICULTY_LABELS = ['', ...t.schedule.difficulties]
   const DIFFICULTY_COEF =   [0,  0.75,   1.0,         1.25,    1.5,       2.0]
@@ -160,9 +162,12 @@ function TaskCardForm({
     setStep(2)
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!title.trim() || !preset) return
-    onSave({ title: title.trim(), emoji, durationMins, xp, weeklyFrequency, defaultTimeStart, preset })
+    setTranslating(true)
+    const translatedTitle = await translateText(title.trim(), lang)
+    setTranslating(false)
+    onSave({ title: translatedTitle, emoji, durationMins, xp, weeklyFrequency, defaultTimeStart, preset })
   }
 
   // Step 1: pick type
@@ -337,10 +342,11 @@ function TaskCardForm({
       <div className="flex gap-3">
         <button
           onClick={handleSave}
-          className="flex-1 rounded-xl py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
+          disabled={translating}
+          className="flex-1 rounded-xl py-3 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
           style={{ background: `linear-gradient(135deg, ${preset!.color}, ${preset!.color}99)` }}
         >
-          {t.pool.saveCard}
+          {translating ? '...' : t.pool.saveCard}
         </button>
         <button
           onClick={onCancel}

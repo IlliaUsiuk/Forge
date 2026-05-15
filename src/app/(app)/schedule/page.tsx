@@ -11,6 +11,7 @@ import { useStore } from '@/lib/store'
 import { calcXP, catColor, catLabel, catEmoji, translateCatLabel, type Category } from '@/lib/types'
 import { Portal } from '@/components/Portal'
 import { useT } from '@/lib/i18n'
+import { translateText } from '@/lib/translate'
 
 const PRESETS = [
   { key: 'sport',    label: 'Спорт',      color: '#f87171', emoji: '🏃', emojis: ['🏋️','🏃','⚽','🎯','🏊','🚴','🥊','🧘','🏆','🤸','🎽','🏅','🏄','🥅','🎾','🛹'] },
@@ -43,6 +44,7 @@ function AddTaskModal({ dateStr, onClose, onAdd }: {
   const [difficulty, setDifficulty] = useState(2)
   const [timeStart, setTimeStart] = useState('')
   const [durationMins, setDurationMins] = useState(60)
+  const [translating, setTranslating] = useState(false)
 
   const emoji = selectedEmoji ?? preset?.emoji ?? '📋'
   const color = preset?.color ?? '#818cf8'
@@ -66,9 +68,12 @@ function AddTaskModal({ dateStr, onClose, onAdd }: {
     onClose()
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!title.trim() || !cat) return
-    onAdd({ title: title.trim(), emoji, track: cat.id, xp, durationMins, timeStart: timeStart || undefined })
+    setTranslating(true)
+    const translatedTitle = await translateText(title.trim(), lang)
+    setTranslating(false)
+    onAdd({ title: translatedTitle, emoji, track: cat.id, xp, durationMins, timeStart: timeStart || undefined })
     onClose()
   }
 
@@ -258,11 +263,11 @@ function AddTaskModal({ dateStr, onClose, onAdd }: {
 
             <button
               onClick={handleSave}
-              disabled={!title.trim()}
+              disabled={!title.trim() || translating}
               className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
               style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
             >
-              {t.schedule.addTaskBtn}
+              {translating ? '...' : t.schedule.addTaskBtn}
             </button>
           </>
         )}
@@ -945,9 +950,12 @@ function ScheduleTaskCard({
   const dur = task.durationMins ?? DEFAULT_DURATION
   const endTime = displayTime ? minToTime(timeToMin(displayTime) + dur) : null
 
-  function saveTitle() {
+  async function saveTitle() {
     const trimmed = localTitle.trim()
-    if (trimmed && trimmed !== task.title) onUpdateTitle(task.id, trimmed)
+    if (!trimmed || trimmed === task.title) return
+    const translated = await translateText(trimmed, lang)
+    setLocalTitle(translated)
+    onUpdateTitle(task.id, translated)
   }
 
   function handleEndTimeChange(val: string) {
